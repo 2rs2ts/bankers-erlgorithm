@@ -40,6 +40,8 @@ start(Limit, N) ->
                 true -> throw(client_limit_too_high)
             end,
             Client = #client{limit = Limit, claim = Limit},
+            io:format(  "A new Client is being spawned with limit = ~p.~n",
+                        [Limit]),
             spawn(fun() -> client_loop(Client, N) end)
     end.
 
