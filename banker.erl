@@ -14,10 +14,11 @@
 %%  capital: the initial capital of the bank; the total amount of resources
 %%           which will be available
 %%  cash_on_hand: the amount of resources not yet lent.
+%%  clients: a list of Clients (their pids)
 -record(banker,
         { capital :: non_neg_integer()
         , cash_on_hand :: non_neg_integer()
-        , clients :: list(#client)
+        , clients :: list(pid())
         }).
 
 
@@ -105,12 +106,17 @@ main(Banker) ->
     process_flag(trap_exit, true),
     receive
         {Pid, status} ->
+            NewBanker = Banker,
             Pid ! { Banker#banker.capital
                   , Banker#banker.cash_on_hand
-                  , length(Banker#banker.clients
+                  , length(Banker#banker.clients)
                   };
         {Pid, attach, Limit} ->
-            
+            NewBanker = #banker { capital = Banker#banker.capital
+                                , cash_on_hand = Banker#banker.cash_on_hand
+                                , clients = [Pid | Banker#banker.clients]
+                                },
+            link(Pid);
         {Pid, request, NUnits} ->
             lists:sort(compare_clients, Banker#banker.clients),
             case is_safe_state(Banker#banker.clients, NUnits) of
@@ -122,7 +128,7 @@ main(Banker) ->
         _ ->
             throw(unexpected_banker_message)
     end,
-    main(Banker).
+    main(NewBanker).
     
 %% compare_clients/2
 %% Compare two clients based on remaining claim.
