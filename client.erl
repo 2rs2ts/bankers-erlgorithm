@@ -97,10 +97,12 @@ request(Client, NUnits) ->
                                 , loan = Client#client.loan + NUnits
                                 , claim = Client#client.claim - NUnits
                                 };
-        unsafe ->
-            % should client loop this or should it just wait to receive?
+        {Pid, unsafe} ->
+            Pid ! {self(), waiting},
             receive
-                now_ok ->
+                try_again ->
+                    request(Client, NUnits) % not tail recursive!
+            end;
         _ ->
             throw(unexpected_client_message)
     end,
