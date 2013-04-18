@@ -99,6 +99,8 @@ request(Client, NUnits) ->
                                 };
         unsafe ->
             % should client loop this or should it just wait to receive?
+            receive
+                now_ok ->
         _ ->
             throw(unexpected_client_message)
     end,
