@@ -2,6 +2,7 @@
 %% Author: Andrew Garrett
 -module(banker).
 -export([start/1, status/0, attach/1, request/1, release/1]).
+-import_record_info([{client, client}]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
@@ -16,7 +17,7 @@
 -record(banker,
         { capital :: non_neg_integer()
         , cash_on_hand :: non_neg_integer()
-        , clients :: list()
+        , clients :: list(#client)
         }).
 
 
@@ -111,9 +112,32 @@ main(Banker) ->
         {Pid, attach, Limit} ->
             
         {Pid, request, NUnits} ->
+            lists:sort(compare_clients, Banker#banker.clients),
             
         {Pid, release, NUnits} ->
             
         _ ->
             throw(unexpected_banker_message)
+    end.
+    
+%% compare_clients/2
+%% Compare two clients based on remaining claim.
+%% Arguments:
+%%  C1: a Client record
+%%  C2: a different Client record
+compare_clients(C1, C2) ->
+    C1#client.claim < C2#client.claim.
+
+%% is_safe_state/2
+%% Check the list of Clients and determine if the state is safe.
+%% Arguments:
+%%  Clients: the list of Clients.
+%%  NUnits: the number of resources requested by a Client.
+%% Returns:
+%%  true if state is safe, false is not.
+% From http://stackoverflow.com/a/12657896/691859
+is_safe_state(Clients, NUnits) ->
+    case lists:dropwhile(fun(C) -> C.client#claim =< NUnits end, Clients) of
+        [] -> false;
+        [C | _] -> true
     end.
