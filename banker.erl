@@ -104,40 +104,43 @@ release(NUnits) ->
 
 main(Banker) ->
     process_flag(trap_exit, true),
+    Capital = Banker#banker.capital,
+    CashOnHand = Banker#banker.cash_on_hand,
+    Clients = Banker#banker.clients,
     receive
         {Pid, status} ->
             NewBanker = Banker,
-            Pid ! { Banker#banker.capital
-                  , Banker#banker.cash_on_hand
-                  , length(Banker#banker.clients)
-                  };
+            Pid ! { Capital, CashOnHand, length(Clients)};
         {Pid, attach, Limit} ->
-            NewBanker = #banker { capital = Banker#banker.capital
-                                , cash_on_hand = Banker#banker.cash_on_hand
-                                , clients = [Pid | Banker#banker.clients]
+            NewBanker = #banker { capital = Capital
+                                , cash_on_hand = CashOnHand
+                                , clients = [Pid | Clients]
                                 },
             link(Pid);
         {Pid, request, NUnits} ->
-            lists:sort(compare_clients, Banker#banker.clients),
-            case is_safe_state(Banker#banker.clients, NUnits) of
+            lists:sort(compare_clients, Clients),
+            case is_safe_state(Clients, CashOnHand) of
                 true ->
                     Pid ! ok,
-                    NewBanker = #banker { capital = Banker#banker.capital
-                                        , cash_on_hand = Banker#banker.cash_on_hand - NUnits
-                                        , clients = Banker#banker.clients
+                    NewBanker = #banker { capital = Capital
+                                        , cash_on_hand = CashOnHand - NUnits
+                                        , clients = Clients
                                         };
                 false ->
                     
             end;
         {Pid, release, NUnits} ->
-            NewBanker = #banker { capital = Banker#banker.capital
-                                , cash_on_hand = Banker#banker.cash_on_hand
-                                                 + NUnits
-                                , clients = Banker#banker.clients
+            NewBanker = #banker { capital = Capital
+                                , cash_on_hand = CashOnHand + NUnits
+                                , clients = Clients
                                 };
             % determine whether any outstanding requests can be granted
         {'EXIT', Pid, Reason} ->
             % reclaim the loan
+            NewBanker = #banker { capital = Capital
+                                , cash_on_hand =
+                                , clients = delete(Pid, Clients)
+                                };
         _ ->
             throw(unexpected_banker_message)
     end,
@@ -159,8 +162,16 @@ compare_clients(C1, C2) ->
 %% Returns:
 %%  true if state is safe, false is not.
 % From http://stackoverflow.com/a/12657896/691859
-is_safe_state(Clients, NUnits) ->
-    case lists:dropwhile(fun(C) -> C.client#claim =< NUnits end, Clients) of
-        [] -> false;
-        _ -> true
+is_safe_state([], _) ->
+    true;
+is_safe_state([CH | CT], CashOnHand) ->
+    %case lists:dropwhile(fun(C) -> C.client#claim =< CashOnHand end, Clients) of
+    %    [] -> false;
+    %    _ -> true
+    %end.
+    if
+        CH.client#claim > CashOnHand ->
+            false;
+        CH.client#claim =< CashOnHand ->
+            is_safe_state(CT, CashOnHand + CH.client#loan)
     end.
