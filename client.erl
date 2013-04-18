@@ -31,13 +31,13 @@
 %%  Limit: the maximum number of resources the Client can request.
 %%  N: the number of interactions in which the Client will engage.
 start(Limit, N) ->
-    case whereis(banker) of ->
+    case whereis(banker) of
         unregistered ->
             throw(banker_not_registered);
         _ ->
             {Capital, _, _} = banker:status(),
-            if (Limit > Capital) ->
-                throw(client_limit_too_high)
+            case Limit > Capital of
+                true -> throw(client_limit_too_high)
             end,
             Client = #client{limit = Limit, claim = Limit},
             banker:attach(Limit),
@@ -51,15 +51,16 @@ start(Limit, N) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 client_loop(Client, N) ->
-    case whereis(banker) of ->
+    case whereis(banker) of
         unregistered ->
             throw(banker_not_registered);
         _ ->
             {Capital, _, _} = banker:status()
     end,
+    NUnits = random:uniform(Capital),
     case random:uniform(2) of
         1 ->    % Request
-            
+            banker:request(NUnits);
         2 ->    % Release
-            
+            banker:release(NUnits)
     end.
