@@ -14,8 +14,9 @@
 %%           which will be available
 %%  cash_on_hand: the amount of resources not yet lent.
 -record(banker,
-        { capital = non_neg_integer(),
-        , cash_on_hand = non_neg_integer()
+        { capital :: non_neg_integer()
+        , cash_on_hand :: non_neg_integer()
+        , clients :: list()
         }).
 
 
@@ -41,11 +42,57 @@ status() ->
     case whereis(banker) of
         unregistered ->
             throw(banker_not_registered);
-        _Any ->
-            {Capital, CashOnHand, NClients} = banker ! status
+        _ ->
+            banker ! {self(), status},
+            receive
+                Any -> Any
+            end
     end.
 
-%%
+%% attach/1
+%% A Client attaches to the Banker.
+%% Arguments:
+%%  Limit: the maximum number of resources the Client can request.
+attach(Limit) ->
+    case whereis(banker) of
+        unregistered ->
+            throw(banker_not_registered);
+        _ ->
+            banker ! {self(), attach, Limit},
+            receive
+                Any -> Any
+            end
+    end.
+
+%% request/1
+%% An attached Client requests more resources from the Banker.
+%% Arguments:
+%%  NUnits: the number of resources requested.
+request(NUnits) ->
+    case whereis(banker) of
+        unregistered ->
+            throw(banker_not_registered);
+        _ ->
+            banker ! {self(), request, NUnits},
+            receive
+                Any -> Any
+            end
+    end.
+
+%% release/1
+%% An attached Client releases resources to the Banker.
+%% Arguments:
+%%  NUnits: the number of resources released.
+release(NUnits) ->
+    case whereis(banker) of
+        unregistered ->
+            throw(banker_not_registered);
+        _ ->
+            banker ! {self(), release, NUnits},
+            receive
+                Any -> Any
+            end
+    end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
@@ -55,4 +102,11 @@ status() ->
 
 main(Banker) ->
     process_flag(trap_exit, true),
-    
+    receive
+        {Pid, status} ->
+            Pid ! { Banker#banker.capital
+                  , Banker#banker.cash_on_hand
+                  , length(Banker#banker.clients
+                  };
+        {} ->
+    end.
