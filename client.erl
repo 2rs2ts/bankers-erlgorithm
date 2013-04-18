@@ -31,4 +31,11 @@
 %%  Limit: the maximum number of resources the Client can request.
 %%  N: the number of interactions in which the Client will engage.
 start(Limit, N) ->
-    
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%%  Server functions (run the client)
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
