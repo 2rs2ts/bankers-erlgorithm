@@ -105,6 +105,9 @@ main(Banker) ->
     ClientProcs = Banker#banker.client_procs,
     receive
         {Pid, status} ->
+            io:format(  "Banker status was requested. CashOnHand = ~p, 
+                        ClientProcs = ~p.~n",
+                        [CashOnHand, ClientProcs]),
             NewBanker = Banker,
             Pid ! { Capital, CashOnHand, length(ClientProcs)};
         {Pid, attach, Limit} ->
