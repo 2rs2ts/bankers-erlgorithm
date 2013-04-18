@@ -134,8 +134,12 @@ main(Banker) ->
                                 , cash_on_hand = CashOnHand + NUnits
                                 , clients = ClientProcs
                                 };
+            io:format(  "Banker is notifying waiting Clients to try again.~n",
+                        []),
             notify_waiting_clients();
         {'EXIT', Pid, {finished, Loan} ->
+            io:format(  "Banker reclaims ~p resources from exiting Client.~n",
+                        [Loan]),
             NewBanker = #banker { capital = Capital
                                 , cash_on_hand = CashOnHand + Loan
                                 , clients = delete(Pid, ClientProcs)
@@ -196,8 +200,12 @@ is_safe_state([CH | CT], CashOnHand) ->
 notify_waiting_clients() ->
     receive
         {Pid, waiting} ->
+            io:format(  "Banker is notifying waiting Client ~p to retry its
+                        request.~n",
+                        [Pid]),
             Pid ! try_again,
             notify_waiting_clients()
     after 0 ->
+        io:format(  "Banker has finished notifying waiting Clients.~n", []),
         ok
     end.
