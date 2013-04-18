@@ -63,7 +63,10 @@ client_loop(Client, N) ->
             banker:request(NUnits),
             receive
                 ok ->
-                    
+                    NewClient = #client { limit = Client#client.limit
+                                        , loan = Client#client.loan + NUnits
+                                        , claim = Client#client.claim - NUnits
+                                        };
                 unsafe ->
                     
                 _ ->
