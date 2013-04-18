@@ -135,10 +135,9 @@ main(Banker) ->
                                 , clients = ClientProcs
                                 };
             notify_waiting_clients();
-        {'EXIT', Pid, Reason} ->
-            % reclaim the loan
+        {'EXIT', Pid, {finished, Loan} ->
             NewBanker = #banker { capital = Capital
-                                , cash_on_hand =
+                                , cash_on_hand = CashOnHand + Loan
                                 , clients = delete(Pid, ClientProcs)
                                 }
     after 0 ->
