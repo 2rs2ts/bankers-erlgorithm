@@ -47,7 +47,8 @@ status() ->
         _ ->
             banker ! {self(), status},
             receive
-                Any -> Any
+                {Capital, CashOnHand, NClients} ->
+                    {Capital, CashOnHand, NClients}
             end
     end.
 
@@ -61,9 +62,6 @@ attach(Limit) ->
             throw(banker_not_registered);
         _ ->
             banker ! {self(), attach, Limit},
-            receive
-                Any -> Any
-            end
     end.
 
 %% request/1
@@ -76,9 +74,6 @@ request(NUnits) ->
             throw(banker_not_registered);
         _ ->
             banker ! {self(), request, NUnits}
-            receive
-                Any -> Any
-            end
     end.
 
 %% release/1
@@ -91,9 +86,6 @@ release(NUnits) ->
             throw(banker_not_registered);
         _ ->
             banker ! {self(), release, NUnits},
-            receive
-                Any -> Any
-            end
     end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -128,7 +120,7 @@ main(Banker) ->
                                         , clients = Clients
                                         };
                 false ->
-                    
+                    % postpone the request
             end;
         {Pid, release, NUnits} ->
             NewBanker = #banker { capital = Capital
