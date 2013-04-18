@@ -55,6 +55,7 @@ start(Limit, N) ->
 %%  Client: the #client record
 %%  N: the number of operations which will be performed before exiting
 client_loop(_, 0) ->
+    io:format("Client ~p is exiting.~n", [self()]),
     exit(finished);
 client_loop(Client, N) ->
     receive
@@ -65,15 +66,22 @@ client_loop(Client, N) ->
             unregistered ->
                 throw(banker_not_registered);
             _ ->
+                io:format(  "Client ~p is attaching to the Bank with a limit of
+                            ~p.~n",
+                            [self(), Client#client.limit]),
                 banker:attach(Client#client.limit),
                 {Capital, _, _} = banker:status()
         end,
         NUnits = random:uniform(Capital),
         case random:uniform(2) of
             1 ->    % Request
+                io:format(  "Client ~p is requesting ~p resources.~n",
+                            [self(), NUnits]),
                 banker:request(NUnits),
                 NewClient = request(Client, NUnits);
             2 ->    % Release
+                io:format(  "Client ~p is releasing ~p resources.~n",
+                            [self(), NUnits]),
                 banker:release(NUnits),
                 NewClient = #client { limit = Client#client.limit
                                     , loan = Client#client.loan - NUnits
@@ -93,14 +101,22 @@ client_loop(Client, N) ->
 request(Client, NUnits) ->
     receive
         ok ->
+            io:format(  "Client ~p request for ~p resources accepted.~n",
+                        [self(), NUnits]),
             NewClient = #client { limit = Client#client.limit
                                 , loan = Client#client.loan + NUnits
                                 , claim = Client#client.claim - NUnits
                                 };
         {Pid, unsafe} ->
             Pid ! {self(), waiting},
+            io:format(  "Client ~p request for ~p resources denied,
+                        Client is waiting.~n",
+                        [self(), NUnits]),
             receive
                 try_again ->
+                    io:format(  "Client ~p is trying to request ~p resources
+                                again.~n",
+                                [self(), NUnits]),
                     request(Client, NUnits) % not tail recursive!
             end;
         _ ->
