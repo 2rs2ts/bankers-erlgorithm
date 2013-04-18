@@ -35,8 +35,13 @@ start(Limit, N) ->
         unregistered ->
             throw(banker_not_registered);
         _ ->
+            {Capital, _, _} = banker:status(),
+            if (Limit > Capital) ->
+                throw(client_limit_too_high)
+            end,
             Client = #client{limit = Limit, claim = Limit},
-            banker:attach(Limit)
+            banker:attach(Limit),
+            client_loop(Client, N)
     end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -45,3 +50,16 @@ start(Limit, N) ->
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+client_loop(Client, N) ->
+    case whereis(banker) of ->
+        unregistered ->
+            throw(banker_not_registered);
+        _ ->
+            {Capital, _, _} = banker:status()
+    end,
+    case random:uniform(2) of
+        1 ->    % Request
+            
+        2 ->    % Release
+            
+    end.
