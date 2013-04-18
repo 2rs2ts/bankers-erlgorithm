@@ -31,7 +31,13 @@
 %%  Limit: the maximum number of resources the Client can request.
 %%  N: the number of interactions in which the Client will engage.
 start(Limit, N) ->
-
+    case whereis(banker) of ->
+        unregistered ->
+            throw(banker_not_registered);
+        _ ->
+            Client = #client{limit = Limit, claim = Limit},
+            banker:attach(Limit)
+    end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%

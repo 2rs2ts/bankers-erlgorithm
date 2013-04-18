@@ -113,7 +113,10 @@ main(Banker) ->
             
         {Pid, request, NUnits} ->
             lists:sort(compare_clients, Banker#banker.clients),
-            
+            case is_safe_state(Banker#banker.clients, NUnits) of
+                true ->
+                false ->
+            end;
         {Pid, release, NUnits} ->
             
         _ ->
