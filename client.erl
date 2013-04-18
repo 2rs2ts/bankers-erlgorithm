@@ -49,6 +49,13 @@ start(Limit, N) ->
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%% client_loop/2
+%% 
+%% Arguments:
+%%  Client: the #client record
+%%  N: the number of operations which will be performed before exiting
+client_loop(_, 0) ->
+    exit(finished);
 client_loop(Client, N) ->
     case whereis(banker) of
         unregistered ->
@@ -71,6 +78,13 @@ client_loop(Client, N) ->
     end,
     client_loop(NewClient, N-1).
 
+%% request/2
+%%
+%% Arguments:
+%%  Client: the #client record
+%%  NUnits: the number of resources requested
+%% Returns:
+%%  NewClient: the modified #client record
 request(Client, NUnits) ->
     receive
         ok ->
