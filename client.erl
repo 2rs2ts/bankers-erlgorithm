@@ -54,9 +54,9 @@ start(Limit, N) ->
 %% Arguments:
 %%  Client: the #client record
 %%  N: the number of operations which will be performed before exiting
-client_loop(_, 0) ->
+client_loop(Client, 0) ->
     io:format("Client ~p is exiting.~n", [self()]),
-    exit(finished);
+    exit({finished, Client#client.loan});
 client_loop(Client, N) ->
     receive
         {Pid, getclient} ->
