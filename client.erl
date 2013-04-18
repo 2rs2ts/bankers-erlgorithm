@@ -57,24 +57,29 @@ start(Limit, N) ->
 client_loop(_, 0) ->
     exit(finished);
 client_loop(Client, N) ->
-    case whereis(banker) of
-        unregistered ->
-            throw(banker_not_registered);
-        _ ->
-            banker:attach(Client#client.limit),
-            {Capital, _, _} = banker:status()
-    end,
-    NUnits = random:uniform(Capital),
-    case random:uniform(2) of
-        1 ->    % Request
-            banker:request(NUnits),
-            NewClient = request(Client, NUnits);
-        2 ->    % Release
-            banker:release(NUnits),
-            NewClient = #client { limit = Client#client.limit
-                                , loan = Client#client.loan - NUnits
-                                , claim = Client#client.claim + NUnits
-                                };
+    receive
+        {Pid, getclient} ->
+            Pid ! Client
+    after 0 ->
+        case whereis(banker) of
+            unregistered ->
+                throw(banker_not_registered);
+            _ ->
+                banker:attach(Client#client.limit),
+                {Capital, _, _} = banker:status()
+        end,
+        NUnits = random:uniform(Capital),
+        case random:uniform(2) of
+            1 ->    % Request
+                banker:request(NUnits),
+                NewClient = request(Client, NUnits);
+            2 ->    % Release
+                banker:release(NUnits),
+                NewClient = #client { limit = Client#client.limit
+                                    , loan = Client#client.loan - NUnits
+                                    , claim = Client#client.claim + NUnits
+                                    };
+        end
     end,
     client_loop(NewClient, N-1).
 
