@@ -40,8 +40,7 @@ start(Limit, N) ->
                 true -> throw(client_limit_too_high)
             end,
             Client = #client{limit = Limit, claim = Limit},
-            banker:attach(Limit),
-            client_loop(Client, N)
+            spawn(fun() -> client_loop(Client, N) end)
     end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -55,6 +54,7 @@ client_loop(Client, N) ->
         unregistered ->
             throw(banker_not_registered);
         _ ->
+            banker:attach(Client#client.limit),
             {Capital, _, _} = banker:status()
     end,
     NUnits = random:uniform(Capital),
