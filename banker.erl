@@ -128,8 +128,7 @@ main(Banker) ->
                                 , clients = ClientProcs
                                 };
             % determine whether any outstanding requests can be granted
-            receive
-                {Pid,
+            notify_waiting_clients();
         {'EXIT', Pid, Reason} ->
             % reclaim the loan
             NewBanker = #banker { capital = Capital
@@ -188,7 +187,7 @@ is_safe_state([CH | CT], CashOnHand) ->
 %% Go through the mailbox and find all messages from Client procs which are
 %% waiting to have their requests processed, and tell them to try_again.
 %% Returns:
-%%  done when done.
+%%  ok when done.
 notify_waiting_clients() ->
     receive
         {Pid, waiting} ->
