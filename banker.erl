@@ -125,7 +125,8 @@ main(Banker) ->
             end;
         {Pid, release, NUnits} ->
             NewBanker = #banker { capital = Banker#banker.capital
-                                , cash_on_hand = Banker#banker.cash_on_hand + NUnits
+                                , cash_on_hand = Banker#banker.cash_on_hand
+                                                 + NUnits
                                 , clients = Banker#banker.clients
                                 };
             % determine whether any outstanding requests can be granted
