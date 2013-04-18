@@ -130,6 +130,8 @@ main(Banker) ->
                                 , clients = Banker#banker.clients
                                 };
             % determine whether any outstanding requests can be granted
+        {'EXIT', Pid, Reason} ->
+            % reclaim the loan
         _ ->
             throw(unexpected_banker_message)
     end,
