@@ -134,7 +134,6 @@ main(Banker) ->
                                 , cash_on_hand = CashOnHand + NUnits
                                 , clients = ClientProcs
                                 };
-            % determine whether any outstanding requests can be granted
             notify_waiting_clients();
         {'EXIT', Pid, Reason} ->
             % reclaim the loan
