@@ -62,7 +62,12 @@ client_loop(Client, N) ->
         1 ->    % Request
             banker:request(NUnits),
             receive
-            
+                ok ->
+                    
+                unsafe ->
+                    
+                _ ->
+                    throw(unexpected_client_message)
             end;
         2 ->    % Release
             banker:release(NUnits),
