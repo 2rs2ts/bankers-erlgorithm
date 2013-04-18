@@ -94,6 +94,10 @@ release(NUnits) ->
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%% main/1
+%% Run the Bank.
+%% Arguments:
+%%  Banker: the #banker record
 main(Banker) ->
     process_flag(trap_exit, true),
     Capital = Banker#banker.capital,

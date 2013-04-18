@@ -50,7 +50,7 @@ start(Limit, N) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% client_loop/2
-%% 
+%% Run the client.
 %% Arguments:
 %%  Client: the #client record
 %%  N: the number of operations which will be performed before exiting
@@ -84,7 +84,7 @@ client_loop(Client, N) ->
     client_loop(NewClient, N-1).
 
 %% request/2
-%%
+%% Send a loan request to the Bank
 %% Arguments:
 %%  Client: the #client record
 %%  NUnits: the number of resources requested
