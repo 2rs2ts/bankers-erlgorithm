@@ -61,17 +61,7 @@ client_loop(Client, N) ->
     case random:uniform(2) of
         1 ->    % Request
             banker:request(NUnits),
-            receive
-                ok ->
-                    NewClient = #client { limit = Client#client.limit
-                                        , loan = Client#client.loan + NUnits
-                                        , claim = Client#client.claim - NUnits
-                                        };
-                unsafe ->
-                    
-                _ ->
-                    throw(unexpected_client_message)
-            end;
+            NewClient = request(Client, NUnits);
         2 ->    % Release
             banker:release(NUnits),
             NewClient = #client { limit = Client#client.limit
@@ -80,3 +70,17 @@ client_loop(Client, N) ->
                                 };
     end,
     client_loop(NewClient, N-1).
+
+request(Client, NUnits) ->
+    receive
+        ok ->
+            NewClient = #client { limit = Client#client.limit
+                                , loan = Client#client.loan + NUnits
+                                , claim = Client#client.claim - NUnits
+                                };
+        unsafe ->
+            
+        _ ->
+            throw(unexpected_client_message)
+    end,
+    NewClient.
