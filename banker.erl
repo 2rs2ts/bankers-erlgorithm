@@ -18,7 +18,7 @@
 -record(banker,
         { capital :: non_neg_integer()
         , cash_on_hand :: non_neg_integer()
-        , clients :: list(pid())
+        , client_procs :: list(pid())
         }).
 
 
@@ -98,26 +98,27 @@ main(Banker) ->
     process_flag(trap_exit, true),
     Capital = Banker#banker.capital,
     CashOnHand = Banker#banker.cash_on_hand,
-    Clients = Banker#banker.clients,
+    ClientProcs = Banker#banker.client_procs,
     receive
         {Pid, status} ->
             NewBanker = Banker,
-            Pid ! { Capital, CashOnHand, length(Clients)};
+            Pid ! { Capital, CashOnHand, length(ClientProcs)};
         {Pid, attach, Limit} ->
             NewBanker = #banker { capital = Capital
                                 , cash_on_hand = CashOnHand
-                                , clients = [Pid | Clients]
+                                , client_procs = [Pid | ClientProcs]
                                 },
             link(Pid);
         {Pid, request, NUnits} ->
             % How to get #clients instead of pids?
+            Clients = [C || 
             lists:sort(compare_clients, Clients),
             case is_safe_state(Clients, CashOnHand) of
                 true ->
                     Pid ! ok,
                     NewBanker = #banker { capital = Capital
                                         , cash_on_hand = CashOnHand - NUnits
-                                        , clients = Clients
+                                        , clients = ClientProcs
                                         };
                 false ->
                     % postpone the request
@@ -125,19 +126,36 @@ main(Banker) ->
         {Pid, release, NUnits} ->
             NewBanker = #banker { capital = Capital
                                 , cash_on_hand = CashOnHand + NUnits
-                                , clients = Clients
+                                , clients = ClientProcs
                                 };
             % determine whether any outstanding requests can be granted
         {'EXIT', Pid, Reason} ->
             % reclaim the loan
             NewBanker = #banker { capital = Capital
                                 , cash_on_hand =
-                                , clients = delete(Pid, Clients)
+                                , clients = delete(Pid, ClientProcs)
                                 };
         _ ->
             throw(unexpected_banker_message)
     end,
     main(NewBanker).
+
+%% get_clients/1
+%% Get the #client records from a list of Client processes.
+%% Arguments:
+%%  ClientProcs: the list of Client processes.
+%% Returns:
+%%  Clients: the list of #client records.
+get_clients(ClientProcs) -> h_get_clients(ClientProcs, []).
+h_get_clients([], Clients) -> Clients;
+h_get_clients([PH | PT], Clients) ->
+    PH ! {self(), getclient},
+    receive
+        Client ->
+            NewClients = [Client | Clients]
+    end,
+    h_get_clients(PT, NewClients).
+
     
 %% compare_clients/2
 %% Compare two clients based on remaining claim.
