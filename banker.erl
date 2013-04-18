@@ -110,8 +110,7 @@ main(Banker) ->
                                 },
             link(Pid);
         {Pid, request, NUnits} ->
-            % How to get #clients instead of pids?
-            Clients = [C || 
+            Clients = get_clients(ClientProcs),
             lists:sort(compare_clients, Clients),
             case is_safe_state(Clients, CashOnHand) of
                 true ->
