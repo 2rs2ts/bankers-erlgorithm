@@ -195,5 +195,5 @@ notify_waiting_clients() ->
             Pid ! try_again,
             notify_waiting_clients()
     after 0 ->
-        done
+        ok
     end.
