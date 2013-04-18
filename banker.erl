@@ -139,5 +139,5 @@ compare_clients(C1, C2) ->
 is_safe_state(Clients, NUnits) ->
     case lists:dropwhile(fun(C) -> C.client#claim =< NUnits end, Clients) of
         [] -> false;
-        [C | _] -> true
+        _ -> true
     end.
