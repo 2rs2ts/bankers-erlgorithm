@@ -118,6 +118,7 @@ main(Banker) ->
                                 },
             link(Pid);
         {Pid, request, NUnits} ->
+            % How to get #clients instead of pids?
             lists:sort(compare_clients, Clients),
             case is_safe_state(Clients, CashOnHand) of
                 true ->
@@ -161,14 +162,9 @@ compare_clients(C1, C2) ->
 %%  NUnits: the number of resources requested by a Client.
 %% Returns:
 %%  true if state is safe, false is not.
-% From http://stackoverflow.com/a/12657896/691859
 is_safe_state([], _) ->
     true;
 is_safe_state([CH | CT], CashOnHand) ->
-    %case lists:dropwhile(fun(C) -> C.client#claim =< CashOnHand end, Clients) of
-    %    [] -> false;
-    %    _ -> true
-    %end.
     if
         CH.client#claim > CashOnHand ->
             false;
