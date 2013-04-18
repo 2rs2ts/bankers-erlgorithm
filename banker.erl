@@ -73,7 +73,7 @@ request(NUnits) ->
         unregistered ->
             throw(banker_not_registered);
         _ ->
-            banker ! {self(), request, NUnits},
+            banker ! {self(), request, NUnits}
             receive
                 Any -> Any
             end
@@ -108,5 +108,12 @@ main(Banker) ->
                   , Banker#banker.cash_on_hand
                   , length(Banker#banker.clients
                   };
-        {} ->
+        {Pid, attach, Limit} ->
+            
+        {Pid, request, NUnits} ->
+            
+        {Pid, release, NUnits} ->
+            
+        _ ->
+            io:format("Banker received an unexpected message.~n", [])
     end.
