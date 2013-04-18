@@ -121,7 +121,13 @@ main(Banker) ->
             lists:sort(compare_clients, Banker#banker.clients),
             case is_safe_state(Banker#banker.clients, NUnits) of
                 true ->
+                    Pid ! ok,
+                    NewBanker = #banker { capital = Banker#banker.capital
+                                        , cash_on_hand = Banker#banker.cash_on_hand - NUnits
+                                        , clients = Banker#banker.clients
+                                        };
                 false ->
+                    
             end;
         {Pid, release, NUnits} ->
             NewBanker = #banker { capital = Banker#banker.capital
