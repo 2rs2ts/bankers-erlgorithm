@@ -33,7 +33,7 @@
 %%  Capital - the specified capital amount with which to begin
 start(Capital) ->
     Banker = #banker{capital = Capital, cash_on_hand = Capital},
-    register(banker, spawn(fun() -> main(Banker) end)).
+    register(banker, spawn(banker, main, [Banker])).
 
 %% status/0
 %% Reports the status of the system.
