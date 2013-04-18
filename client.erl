@@ -60,7 +60,13 @@ client_loop(Client, N) ->
     NUnits = random:uniform(Capital),
     case random:uniform(2) of
         1 ->    % Request
-            banker:request(NUnits);
+            banker:request(NUnits),
+            receive
+            
+            end;
         2 ->    % Release
-            banker:release(NUnits)
+            banker:release(NUnits),
+            receive
+            
+            end
     end.
