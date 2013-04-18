@@ -124,7 +124,7 @@ main(Banker) ->
                                         , clients = ClientProcs
                                         };
                 false ->
-                    Pid ! unsafe
+                    Pid ! {self(), unsafe}
             end;
         {Pid, release, NUnits} ->
             NewBanker = #banker { capital = Capital
