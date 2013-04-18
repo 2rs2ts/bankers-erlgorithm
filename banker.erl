@@ -120,7 +120,7 @@ main(Banker) ->
                                         , clients = ClientProcs
                                         };
                 false ->
-                    % postpone the request
+                    Pid ! unsafe
             end;
         {Pid, release, NUnits} ->
             NewBanker = #banker { capital = Capital
