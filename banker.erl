@@ -61,7 +61,7 @@ attach(Limit) ->
         unregistered ->
             throw(banker_not_registered);
         _ ->
-            banker ! {self(), attach, Limit},
+            banker ! {self(), attach, Limit}
     end.
 
 %% request/1
@@ -85,7 +85,7 @@ release(NUnits) ->
         unregistered ->
             throw(banker_not_registered);
         _ ->
-            banker ! {self(), release, NUnits},
+            banker ! {self(), release, NUnits}
     end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -128,14 +128,17 @@ main(Banker) ->
                                 , clients = ClientProcs
                                 };
             % determine whether any outstanding requests can be granted
+            receive
+                {Pid,
         {'EXIT', Pid, Reason} ->
             % reclaim the loan
             NewBanker = #banker { capital = Capital
                                 , cash_on_hand =
                                 , clients = delete(Pid, ClientProcs)
-                                };
-        _ ->
-            throw(unexpected_banker_message)
+                                }
+    after 0 ->
+        %_ ->
+        %    throw(unexpected_banker_message)
     end,
     main(NewBanker).
 
@@ -179,4 +182,18 @@ is_safe_state([CH | CT], CashOnHand) ->
             false;
         CH.client#claim =< CashOnHand ->
             is_safe_state(CT, CashOnHand + CH.client#loan)
+    end.
+
+%% notify_waiting_clients/0
+%% Go through the mailbox and find all messages from Client procs which are
+%% waiting to have their requests processed, and tell them to try_again.
+%% Returns:
+%%  done when done.
+notify_waiting_clients() ->
+    receive
+        {Pid, waiting} ->
+            Pid ! try_again,
+            notify_waiting_clients()
+    after 0 ->
+        done
     end.
