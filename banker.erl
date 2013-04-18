@@ -115,5 +115,5 @@ main(Banker) ->
         {Pid, release, NUnits} ->
             
         _ ->
-            io:format("Banker received an unexpected message.~n", [])
+            throw(unexpected_banker_message)
     end.
