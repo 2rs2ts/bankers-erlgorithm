@@ -66,7 +66,9 @@ client_loop(Client, N) ->
             end;
         2 ->    % Release
             banker:release(NUnits),
-            receive
-            
-            end
-    end.
+            NewClient = #client { limit = Client#client.limit
+                                , loan = Client#client.loan - NUnits
+                                , claim = Client#client.claim + NUnits
+                                };
+    end,
+    client_loop(NewClient, N-1).
