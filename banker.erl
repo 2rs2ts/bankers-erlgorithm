@@ -121,7 +121,8 @@ main(Banker) ->
             
         _ ->
             throw(unexpected_banker_message)
-    end.
+    end,
+    main(Banker).
     
 %% compare_clients/2
 %% Compare two clients based on remaining claim.
