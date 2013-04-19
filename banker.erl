@@ -2,7 +2,6 @@
 %% Author: Andrew Garrett
 -module(banker).
 -export([start/1, status/0, attach/1, request/1, release/1]).
--import_record_info([{client, client}]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
@@ -118,10 +117,10 @@ main(Banker) ->
             link(Pid),
             main(NewBanker);
         {Pid, request, NUnits} ->
-            Clients = get_clients(ClientProcs),
+            %Clients = get_clients(ClientProcs),
             Compare_Clients = fun(C1, C2) -> compare_clients(C1, C2) end,
-            lists:sort(Compare_Clients, Clients),
-            NewBanker = case is_safe_state(Clients, CashOnHand) of
+            lists:sort(Compare_Clients, ClientProcs),
+            NewBanker = case is_safe_state(ClientProcs, CashOnHand) of
                 true ->
                     Pid ! ok,
                     #banker { capital = Capital
@@ -160,15 +159,15 @@ main(Banker) ->
 %%  ClientProcs: the list of Client processes.
 %% Returns:
 %%  Clients: the list of #client records.
-get_clients(ClientProcs) -> h_get_clients(ClientProcs, []).
-h_get_clients([], Clients) -> Clients;
-h_get_clients([PH | PT], Clients) ->
-    PH ! {self(), getclient},
-    receive
-        Client ->
-            NewClients = [Client | Clients]
-    end,
-    h_get_clients(PT, NewClients).
+%%get_clients(ClientProcs) -> h_get_clients(ClientProcs, []).
+%%h_get_clients([], Clients) -> Clients;
+%%h_get_clients([PH | PT], Clients) ->
+%%    PH ! {self(), getclient},
+%%    receive
+%%        {client, Client} ->
+%%            NewClients = [Client | Clients]
+%%    end,
+%%    h_get_clients(PT, NewClients).
 
     
 %% compare_clients/2
@@ -177,7 +176,15 @@ h_get_clients([PH | PT], Clients) ->
 %%  C1: a Client record
 %%  C2: a different Client record
 compare_clients(C1, C2) ->
-    C1#client.claim < C2#client.claim.
+    C1 ! {self(), getclaim},
+    receive
+        {claim, C1_claim} -> C1_claim
+    end,
+    C2 ! {self(), getclaim},
+    receive
+        {claim, C2_claim} -> C2_claim
+    end,
+    C1_claim < C2_claim.
 
 %% is_safe_state/2
 %% Check the list of Clients and determine if the state is safe.
@@ -189,11 +196,19 @@ compare_clients(C1, C2) ->
 is_safe_state([], _) ->
     true;
 is_safe_state([CH | CT], CashOnHand) ->
+    CH ! {self(), getclaim},
+    receive
+        {claim, Claim} -> Claim
+    end,
+    CH ! {self(), getloan},
+    receive
+        {loan, Loan} -> Loan
+    end,
     if
-        CH#client.claim > CashOnHand ->
+        Claim > CashOnHand ->
             false;
-        CH#client.claim =< CashOnHand ->
-            is_safe_state(CT, CashOnHand + CH#client.loan)
+        Claim =< CashOnHand ->
+            is_safe_state(CT, CashOnHand + Loan)
     end.
 
 %% notify_waiting_clients/0
