@@ -67,9 +67,11 @@ client_loop(Client, N) ->
         %{Pid, getclient} ->
         %    Pid ! {client, Client};
         {Pid, getclaim} ->
-            Pid ! {claim, Client#client.claim};
+            Pid ! {claim, Client#client.claim},
+            %client_loop(Client, N);
         {Pid, getloan} ->
-            Pid ! {loan, Client#client.loan}
+            Pid ! {loan, Client#client.loan},
+            %client_loop(Client, N)
     after 0 ->
         %% need to do this only once...
         Capital = case whereis(banker) of
@@ -83,17 +85,21 @@ client_loop(Client, N) ->
                 {TheCapital, _, _} = banker:status(),
                 TheCapital
         end,
-        NUnits = random:uniform(Capital),
+        %NUnits = random:uniform(Capital),
         NewClient = case random:uniform(2) of
             % Normal cases
             1 when Client#client.claim > 0 ->
+                NUnits = random:uniform(Client#client.claim),
                 request(Client, NUnits);
             2 when Client#client.loan > 0 ->
+                NUnits = random:uniform(Client#client.loan),
                 release(Client, NUnits);
             % If guards fail
             1 when Client#client.claim == 0 ->
+                NUnits = random:uniform(Client#client.loan),
                 release(Client, NUnits);
             2 when Client#client.loan == 0 ->
+                NUnits = random:uniform(Client#client.claim),
                 request(Client, NUnits)
         end,
         client_loop(NewClient, N-1)
@@ -128,9 +134,10 @@ request(Client, NUnits) ->
                                 again.~n"
                                 , [self(), NUnits]),
                     request(Client, NUnits) % not tail recursive!
-            end;
-        _ ->
-            throw(unexpected_client_message)
+            end
+    %after 0 ->
+        %_ ->
+        %    throw(unexpected_client_message)
     end.
     
 %% release/2
