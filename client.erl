@@ -62,36 +62,41 @@ client_loop(Client, 0) ->
 client_loop(Client, N) ->
     receive
         {Pid, getclient} ->
-            Pid ! Client
+            Pid ! Client;
+        {Pid, getclaim} ->
+            Pid ! Client#client.claim;
+        {Pid, getloan} ->
+            Pid ! Client#client.loan
     after 0 ->
-        case whereis(banker) of
+        Capital = case whereis(banker) of
             unregistered ->
                 throw(banker_not_registered);
             _ ->
                 io:format(  "Client ~p is attaching to the Bank with a limit of
-                            ~p.~n",
-                            [self(), Client#client.limit]),
+                            ~p.~n"
+                            , [self(), Client#client.limit]),
                 banker:attach(Client#client.limit),
-                {Capital, _, _} = banker:status()
+                {TheCapital, _, _} = banker:status(),
+                TheCapital
         end,
         NUnits = random:uniform(Capital),
-        case random:uniform(2) of
+        NewClient = case random:uniform(2) of
             1 ->    % Request
-                io:format(  "Client ~p is requesting ~p resources.~n",
-                            [self(), NUnits]),
+                io:format(  "Client ~p is requesting ~p resources.~n"
+                            , [self(), NUnits]),
                 banker:request(NUnits),
-                NewClient = request(Client, NUnits);
+                request(Client, NUnits);
             2 ->    % Release
-                io:format(  "Client ~p is releasing ~p resources.~n",
-                            [self(), NUnits]),
+                io:format(  "Client ~p is releasing ~p resources.~n"
+                            , [self(), NUnits]),
                 banker:release(NUnits),
-                NewClient = #client { limit = Client#client.limit
-                                    , loan = Client#client.loan - NUnits
-                                    , claim = Client#client.claim + NUnits
-                                    };
-        end
-    end,
-    client_loop(NewClient, N-1).
+                #client { limit = Client#client.limit
+                        , loan = Client#client.loan - NUnits
+                        , claim = Client#client.claim + NUnits
+                        }
+        end,
+        client_loop(NewClient, N-1)
+    end.
 
 %% request/2
 %% Send a loan request to the Bank
@@ -99,29 +104,28 @@ client_loop(Client, N) ->
 %%  Client: the #client record
 %%  NUnits: the number of resources requested
 %% Returns:
-%%  NewClient: the modified #client record
+%%  the modified #client record
 request(Client, NUnits) ->
     receive
         ok ->
-            io:format(  "Client ~p request for ~p resources accepted.~n",
-                        [self(), NUnits]),
-            NewClient = #client { limit = Client#client.limit
+            io:format(  "Client ~p request for ~p resources accepted.~n"
+                        , [self(), NUnits]),
+            #client { limit = Client#client.limit
                                 , loan = Client#client.loan + NUnits
                                 , claim = Client#client.claim - NUnits
                                 };
         {Pid, unsafe} ->
             Pid ! {self(), waiting},
             io:format(  "Client ~p request for ~p resources denied,
-                        Client is waiting.~n",
-                        [self(), NUnits]),
+                        Client is waiting.~n"
+                        , [self(), NUnits]),
             receive
                 try_again ->
                     io:format(  "Client ~p is trying to request ~p resources
-                                again.~n",
-                                [self(), NUnits]),
+                                again.~n"
+                                , [self(), NUnits]),
                     request(Client, NUnits) % not tail recursive!
             end;
         _ ->
             throw(unexpected_client_message)
-    end,
-    NewClient.
+    end.
