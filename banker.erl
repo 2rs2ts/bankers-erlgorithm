@@ -17,7 +17,7 @@
 -record(banker,
         { capital :: non_neg_integer()
         , cash_on_hand :: non_neg_integer()
-        , client_procs :: list(pid())
+        , client_procs = [] :: list(pid())
         }).
 
 
