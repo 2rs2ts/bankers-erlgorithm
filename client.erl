@@ -85,7 +85,7 @@ client_loop(Client, N) ->
                 io:format(  "Client ~p is requesting ~p resources.~n"
                             , [self(), NUnits]),
                 banker:request(NUnits),
-                request(Client, NUnits);
+                request(Client, NUnits);    % returns NewClient, don't worry
             2 ->    % Release
                 io:format(  "Client ~p is releasing ~p resources.~n"
                             , [self(), NUnits]),
@@ -104,7 +104,7 @@ client_loop(Client, N) ->
 %%  Client: the #client record
 %%  NUnits: the number of resources requested
 %% Returns:
-%%  the modified #client record
+%%  the modified #client record (i.e., NewClient)
 request(Client, NUnits) ->
     receive
         ok ->
