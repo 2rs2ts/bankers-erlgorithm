@@ -85,12 +85,12 @@ client_loop(Client, N) ->
         end,
         NUnits = random:uniform(Capital),
         NewClient = case random:uniform(2) of
-            1 ->    % Request
+            1 when Client#client.claim > 0 ->    % Request
                 io:format(  "Client ~p is requesting ~p resources.~n"
                             , [self(), NUnits]),
                 banker:request(NUnits),
                 request(Client, NUnits);    % returns NewClient, don't worry
-            2 ->    % Release
+            2 when Client#client.loan > 0 ->    % Release
                 io:format(  "Client ~p is releasing ~p resources.~n"
                             , [self(), NUnits]),
                 banker:release(NUnits),
