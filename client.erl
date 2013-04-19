@@ -41,10 +41,18 @@ start(Limit, N) ->
                     throw(client_limit_too_high);
                 Limit =< Capital ->
                     Client = #client{limit = Limit, claim = Limit},
-                    io:format(  "A new Client is being spawned with limit = ~p.
+                    io:format(  "(client start) A new Client is being spawned with limit = ~p.
                                 ~n"
                                 ,[Limit]),
-                    spawn(fun() -> client_loop(Client, N) end)
+                    ClientLoop = fun(C, X) ->
+                        io:format(  "(client start) Client ~p is attaching to the Banker with a limit of
+                            ~p.~n"
+                            , [self(), C#client.limit]),
+                        banker:attach(C#client.limit),
+                        io:format("(client start) Client ~p attached to Banker.~n", [self()]),
+                        client_loop(C, X)
+                        end,
+                    spawn(fun() -> ClientLoop(Client, N) end)
             end
     end.
 
@@ -60,31 +68,34 @@ start(Limit, N) ->
 %%  Client: the #client record
 %%  N: the number of operations which will be performed before exiting
 client_loop(Client, 0) ->
-    io:format("Client ~p is exiting.~n", [self()]),
+    io:format("(client_loop) Client ~p is exiting.~n", [self()]),
     exit({finished, Client#client.loan});
 client_loop(Client, N) ->
+    io:format("(client_loop) Client ~p is on iteration ~p.~n", [self(), N]),
     receive
         %{Pid, getclient} ->
         %    Pid ! {client, Client};
         {Pid, getclaim} ->
-            Pid ! {claim, Client#client.claim},
+            io:format("(client_loop) Banker requesting claim from Client ~p.~n", [self()]),
+            Pid ! {claim, Client#client.claim};
             %client_loop(Client, N);
         {Pid, getloan} ->
-            Pid ! {loan, Client#client.loan},
+            io:format("(client_loop) Banker requesting loan from Client ~p.~n", [self()]),
+            Pid ! {loan, Client#client.loan}
             %client_loop(Client, N)
     after 0 ->
         %% need to do this only once...
-        Capital = case whereis(banker) of
-            unregistered ->
-                throw(banker_not_registered);
-            _ ->
-                io:format(  "Client ~p is attaching to the Bank with a limit of
-                            ~p.~n"
-                            , [self(), Client#client.limit]),
-                banker:attach(Client#client.limit),
-                {TheCapital, _, _} = banker:status(),
-                TheCapital
-        end,
+        %Capital = case whereis(banker) of
+        %    unregistered ->
+        %        throw(banker_not_registered);
+        %    _ ->
+        %        io:format(  "Client ~p is attaching to the Bank with a limit of
+        %                    ~p.~n"
+        %                    , [self(), Client#client.limit]),
+        %        banker:attach(Client#client.limit),
+        %        {TheCapital, _, _} = banker:status(),
+        %        TheCapital
+        %end,
         %NUnits = random:uniform(Capital),
         NewClient = case random:uniform(2) of
             % Normal cases
@@ -113,28 +124,42 @@ client_loop(Client, N) ->
 %% Returns:
 %%  the modified #client record (i.e., NewClient)
 request(Client, NUnits) ->
-    io:format("Client ~p is requesting ~p resources.~n", [self(), NUnits]),
+    io:format("(request) Client ~p is requesting ~p resources.~n", [self(), NUnits]),
     banker:request(NUnits),
     receive
-        ok ->
-            io:format(  "Client ~p request for ~p resources accepted.~n"
-                        , [self(), NUnits]),
-            #client { limit = Client#client.limit
-                                , loan = Client#client.loan + NUnits
-                                , claim = Client#client.claim - NUnits
-                                };
-        {Pid, unsafe} ->
-            Pid ! {self(), waiting},
-            io:format(  "Client ~p request for ~p resources denied,
-                        Client is waiting.~n"
-                        , [self(), NUnits]),
-            receive
-                try_again ->
-                    io:format(  "Client ~p is trying to request ~p resources
-                                again.~n"
-                                , [self(), NUnits]),
-                    request(Client, NUnits) % not tail recursive!
-            end
+        {Pid, getclaim} ->
+            io:format("(request) Banker requesting claim from Client ~p.~n", [self()]),
+            Pid ! {claim, Client#client.claim}
+            %client_loop(Client, N);
+    end,
+    receive
+        {Pid1, getloan} ->
+            io:format("(request) Banker requesting loan from Client ~p.~n", [self()]),
+            Pid1 ! {loan, Client#client.loan}
+            %client_loop(Client, N)
+    end,
+        receive
+            ok ->
+                io:format(  "(request) Client ~p request for ~p resources accepted.~n"
+                            , [self(), NUnits]),
+                #client { limit = Client#client.limit
+                                    , loan = Client#client.loan + NUnits
+                                    , claim = Client#client.claim - NUnits
+                                    };
+            {Pid2, unsafe} ->
+                io:format(  "(request) Client ~p request for ~p resources denied.~n"
+                            , [self(), NUnits]),
+                Pid2 ! {self(), waiting},
+                io:format(  "(request) Client ~p is waiting.~n"
+                            , [self()]),
+                receive
+                    try_again ->
+                        io:format(  "(request) Client ~p is trying to request ~p resources
+                                    again.~n"
+                                    , [self(), NUnits]),
+                        request(Client, NUnits) % not tail recursive!
+                end
+        %end
     %after 0 ->
         %_ ->
         %    throw(unexpected_client_message)
@@ -148,7 +173,7 @@ request(Client, NUnits) ->
 %% Returns:
 %%  the modified #client record (i.e., NewClient)
 release(Client, NUnits) ->
-    io:format("Client ~p is releasing ~p resources.~n", [self(), NUnits]),
+    io:format("(release) Client ~p is releasing ~p resources.~n", [self(), NUnits]),
     banker:release(NUnits),
     #client { limit = Client#client.limit
             , loan = Client#client.loan - NUnits
