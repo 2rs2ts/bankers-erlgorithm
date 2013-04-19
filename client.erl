@@ -97,6 +97,7 @@ client_loop(Client, N) ->
         %        TheCapital
         %end,
         %NUnits = random:uniform(Capital),
+        random:seed(),
         NewClient = case random:uniform(2) of
             % Normal cases
             1 when Client#client.claim > 0 ->
@@ -142,6 +143,7 @@ request(Client, NUnits) ->
             ok ->
                 io:format(  "(request) Client ~p request for ~p resources accepted.~n"
                             , [self(), NUnits]),
+                io:format("(request) Client ~p now has ~p resources.~n", [self(),Client#client.loan + NUnits]),
                 #client { limit = Client#client.limit
                                     , loan = Client#client.loan + NUnits
                                     , claim = Client#client.claim - NUnits
@@ -175,6 +177,7 @@ request(Client, NUnits) ->
 release(Client, NUnits) ->
     io:format("(release) Client ~p is releasing ~p resources.~n", [self(), NUnits]),
     banker:release(NUnits),
+    io:format("(release) Client ~p now has ~p resources.~n", [self(),Client#client.loan - NUnits]),
     #client { limit = Client#client.limit
             , loan = Client#client.loan - NUnits
             , claim = Client#client.claim + NUnits
