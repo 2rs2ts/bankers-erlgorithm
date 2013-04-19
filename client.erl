@@ -85,31 +85,30 @@ client_loop(Client, N) ->
         end,
         NUnits = random:uniform(Capital),
         NewClient = case random:uniform(2) of
-            1 when Client#client.claim > 0 ->    % Request
-                io:format(  "Client ~p is requesting ~p resources.~n"
-                            , [self(), NUnits]),
-                banker:request(NUnits),
-                request(Client, NUnits);    % returns NewClient, don't worry
-            2 when Client#client.loan > 0 ->    % Release
-                io:format(  "Client ~p is releasing ~p resources.~n"
-                            , [self(), NUnits]),
-                banker:release(NUnits),
-                #client { limit = Client#client.limit
-                        , loan = Client#client.loan - NUnits
-                        , claim = Client#client.claim + NUnits
-                        }
+            % Normal cases
+            1 when Client#client.claim > 0 ->
+                request(Client, NUnits);
+            2 when Client#client.loan > 0 ->
+                release(Client, NUnits);
+            % If guards fail
+            1 when Client#client.claim == 0 ->
+                release(Client, NUnits);
+            2 when Client#client.loan == 0 ->
+                request(Client, NUnits)
         end,
         client_loop(NewClient, N-1)
     end.
 
 %% request/2
-%% Send a loan request to the Bank
+%% Send a loan request to the Banker
 %% Arguments:
 %%  Client: the #client record
 %%  NUnits: the number of resources requested
 %% Returns:
 %%  the modified #client record (i.e., NewClient)
 request(Client, NUnits) ->
+    io:format("Client ~p is requesting ~p resources.~n", [self(), NUnits]),
+    banker:request(NUnits),
     receive
         ok ->
             io:format(  "Client ~p request for ~p resources accepted.~n"
@@ -133,3 +132,18 @@ request(Client, NUnits) ->
         _ ->
             throw(unexpected_client_message)
     end.
+    
+%% release/2
+%% Send a release request to the Banker
+%% Arguments:
+%%  Client - the #client record
+%%  NUnits - the number of resources to release
+%% Returns:
+%%  the modified #client record (i.e., NewClient)
+release(Client, NUnits) ->
+    io:format("Client ~p is releasing ~p resources.~n", [self(), NUnits]),
+    banker:release(NUnits),
+    #client { limit = Client#client.limit
+            , loan = Client#client.loan - NUnits
+            , claim = Client#client.claim + NUnits
+            }.
