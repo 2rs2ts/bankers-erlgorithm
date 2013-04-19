@@ -38,7 +38,7 @@ start(Limit, N) ->
             {Capital, _, _} = banker:status(),
             if
                 Limit > Capital ->
-                    throw(client_limit_too_high);
+                    erlang:error(badarg);
                 Limit =< Capital ->
                     Client = #client{limit = Limit, claim = Limit},
                     io:format(  "(client start) A new Client is being spawned with limit = ~p.
@@ -71,6 +71,7 @@ client_loop(Client, 0) ->
     io:format("(client_loop) Client ~p is exiting.~n", [self()]),
     exit({finished, Client#client.loan});
 client_loop(Client, N) ->
+    try
     io:format("(client_loop) Client ~p is on iteration ~p.~n", [self(), N]),
     receive
         {Pid, getclaim} ->
@@ -97,7 +98,16 @@ client_loop(Client, N) ->
                 NUnits = random:uniform(Client#client.claim),
                 request(Client, NUnits)
         end,
-        client_loop(NewClient, N-1)
+        {NewClient, N-1}
+    end
+    of
+    %    {'EXIT', Reason} ->  io:format("(client_loop) Client ~p is being terminated.~n", [self()]),
+    %        exit({terminated, Client#client.loan});
+        {NewClient2, N2} -> client_loop(NewClient2, N2)
+    catch
+        _:_ ->
+            io:format("(client_loop) Client ~p is being terminated.~n", [self()]),
+            exit({terminated, Client#client.loan})
     end.
 
 %% request/2

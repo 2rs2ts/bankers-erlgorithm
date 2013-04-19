@@ -139,6 +139,7 @@ main(Banker) ->
                     io:format("(main) State is not safe.~n",[]),
                     Pid ! {self(), unsafe}
             end,
+            exit(Pid, diediedie),
             main(NewBanker);
         {Pid, release, NUnits} ->
             io:format(  "(main) Client ~p releasing ~p resources from Banker.~n"
@@ -150,6 +151,7 @@ main(Banker) ->
             io:format(  "(main) Banker is notifying waiting Clients to try again.~n"
                         , []),
             notify_waiting_clients(),
+            io:format(  "(main) Banker has finished notifying waiting Clients.~n", []),
             main(NewBanker);
         {'EXIT', Pid, {finished, Loan}} ->
             io:format(  "(main) Banker reclaims ~p resources from exiting Client ~p.~n"
@@ -161,7 +163,22 @@ main(Banker) ->
             io:format(  "(main) Banker status after exit: CashOnHand = ~p, 
                         ClientProcs = ~p.~n"
                         , [NewBanker#banker.cash_on_hand, NewBanker#banker.client_procs]),
-            main(NewBanker)
+            main(NewBanker);
+        {'EXIT', Pid, {terminated, Loan}} ->
+            io:format(  "(main) Banker reclaims ~p resources from terminated Client ~p.~n"
+                        , [Loan, Pid]),
+            NewBanker = #banker { capital = Capital
+                                , cash_on_hand = CashOnHand + Loan
+                                , client_procs = lists:delete(Pid, ClientProcs)
+                                },
+            io:format(  "(main) Banker status after exit: CashOnHand = ~p, 
+                        ClientProcs = ~p.~n"
+                        , [NewBanker#banker.cash_on_hand, NewBanker#banker.client_procs]),
+            main(NewBanker);
+        {'EXIT', Pid, Reason} ->
+            io:format(  "(main) An unexpected exit from process ~p was caught with reason: ~p.~n"
+                        , [Pid, Reason]),
+            main(Banker)
     end.
     
 %% compare_clients/2
@@ -219,8 +236,5 @@ notify_waiting_clients() ->
                         request.~n"
                         , [Pid]),
             Pid ! try_again,
-            notify_waiting_clients()    % not tail recursive
-    after 0 ->
-        io:format(  "(notify_waiting_clients) Banker has finished notifying waiting Clients.~n", []),
-        ok
+            notify_waiting_clients()
     end.
