@@ -97,7 +97,7 @@ client_loop(Client, N) ->
         %        TheCapital
         %end,
         %NUnits = random:uniform(Capital),
-        %random:seed(),     % apparently redundant
+        random:seed(now()),
         NewClient = case random:uniform(2) of
             % Normal cases
             1 when Client#client.claim > 0 ->
