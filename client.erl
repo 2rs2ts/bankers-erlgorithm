@@ -61,8 +61,8 @@ client_loop(Client, 0) ->
     exit({finished, Client#client.loan});
 client_loop(Client, N) ->
     receive
-        {Pid, getclient} ->
-            Pid ! {client, Client};
+        %{Pid, getclient} ->
+        %    Pid ! {client, Client};
         {Pid, getclaim} ->
             Pid ! {claim, Client#client.claim};
         {Pid, getloan} ->
