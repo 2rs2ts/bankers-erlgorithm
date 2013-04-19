@@ -36,13 +36,16 @@ start(Limit, N) ->
             throw(banker_not_registered);
         _ ->
             {Capital, _, _} = banker:status(),
-            case Limit > Capital of
-                true -> throw(client_limit_too_high)
-            end,
-            Client = #client{limit = Limit, claim = Limit},
-            io:format(  "A new Client is being spawned with limit = ~p.~n",
-                        [Limit]),
-            spawn(fun() -> client_loop(Client, N) end)
+            if
+                Limit > Capital ->
+                    throw(client_limit_too_high);
+                Limit =< Capital ->
+                    Client = #client{limit = Limit, claim = Limit},
+                    io:format(  "A new Client is being spawned with limit = ~p.
+                                ~n"
+                                ,[Limit]),
+                    spawn(fun() -> client_loop(Client, N) end)
+            end
     end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -68,6 +71,7 @@ client_loop(Client, N) ->
         {Pid, getloan} ->
             Pid ! {loan, Client#client.loan}
     after 0 ->
+        %% need to do this only once...
         Capital = case whereis(banker) of
             unregistered ->
                 throw(banker_not_registered);
