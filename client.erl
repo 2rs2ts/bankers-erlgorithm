@@ -73,30 +73,13 @@ client_loop(Client, 0) ->
 client_loop(Client, N) ->
     io:format("(client_loop) Client ~p is on iteration ~p.~n", [self(), N]),
     receive
-        %{Pid, getclient} ->
-        %    Pid ! {client, Client};
         {Pid, getclaim} ->
             io:format("(client_loop) Banker requesting claim from Client ~p.~n", [self()]),
             Pid ! {claim, Client#client.claim};
-            %client_loop(Client, N);
         {Pid, getloan} ->
             io:format("(client_loop) Banker requesting loan from Client ~p.~n", [self()]),
             Pid ! {loan, Client#client.loan}
-            %client_loop(Client, N)
     after 0 ->
-        %% need to do this only once...
-        %Capital = case whereis(banker) of
-        %    unregistered ->
-        %        throw(banker_not_registered);
-        %    _ ->
-        %        io:format(  "Client ~p is attaching to the Bank with a limit of
-        %                    ~p.~n"
-        %                    , [self(), Client#client.limit]),
-        %        banker:attach(Client#client.limit),
-        %        {TheCapital, _, _} = banker:status(),
-        %        TheCapital
-        %end,
-        %NUnits = random:uniform(Capital),
         random:seed(now()),
         NewClient = case random:uniform(2) of
             % Normal cases
@@ -131,40 +114,33 @@ request(Client, NUnits) ->
         {Pid, getclaim} ->
             io:format("(request) Banker requesting claim from Client ~p.~n", [self()]),
             Pid ! {claim, Client#client.claim}
-            %client_loop(Client, N);
     end,
     receive
         {Pid1, getloan} ->
             io:format("(request) Banker requesting loan from Client ~p.~n", [self()]),
             Pid1 ! {loan, Client#client.loan}
-            %client_loop(Client, N)
     end,
-        receive
-            ok ->
-                io:format(  "(request) Client ~p request for ~p resources accepted.~n"
-                            , [self(), NUnits]),
-                io:format("(request) Client ~p now has ~p resources.~n", [self(),Client#client.loan + NUnits]),
-                #client { limit = Client#client.limit
-                                    , loan = Client#client.loan + NUnits
-                                    , claim = Client#client.claim - NUnits
-                                    };
-            {Pid2, unsafe} ->
-                io:format(  "(request) Client ~p request for ~p resources denied.~n"
-                            , [self(), NUnits]),
-                Pid2 ! {self(), waiting},
-                io:format(  "(request) Client ~p is waiting.~n"
-                            , [self()]),
-                receive
-                    try_again ->
-                        io:format(  "(request) Client ~p is trying to request ~p resources
-                                    again.~n"
-                                    , [self(), NUnits]),
-                        request(Client, NUnits) % not tail recursive!
-                end
-        %end
-    %after 0 ->
-        %_ ->
-        %    throw(unexpected_client_message)
+    receive
+        ok ->
+            io:format(  "(request) Client ~p request for ~p resources accepted.~n"
+                        , [self(), NUnits]),
+            io:format("(request) Client ~p now has ~p resources.~n", [self(),Client#client.loan + NUnits]),
+            #client { limit = Client#client.limit
+                                , loan = Client#client.loan + NUnits
+                                , claim = Client#client.claim - NUnits
+                                };
+        {Pid2, unsafe} ->
+            io:format(  "(request) Client ~p request for ~p resources denied.~n"
+                        , [self(), NUnits]),
+            Pid2 ! {self(), waiting},
+            io:format("(request) Client ~p is waiting.~n", [self()]),
+            receive
+                try_again ->
+                    io:format(  "(request) Client ~p is trying to request ~p resources
+                                again.~n"
+                                , [self(), NUnits]),
+                    request(Client, NUnits)
+            end
     end.
     
 %% release/2

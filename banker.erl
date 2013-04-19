@@ -20,7 +20,6 @@
         , client_procs = [] :: list(pid())
         }).
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
 %%  Client functions (send messages to the server)
@@ -123,7 +122,6 @@ main(Banker) ->
         {Pid, request, NUnits} ->
             io:format(  "(main) Client ~p requesting ~p resources from Banker.~n"
                         , [Pid, NUnits]),
-            %Clients = get_clients(ClientProcs),
             Compare_Clients = fun(C1, C2) -> compare_clients(C1, C2) end,
             io:format("(main) Banker is sorting clients.~n", []),
             lists:sort(Compare_Clients, ClientProcs),
@@ -164,27 +162,7 @@ main(Banker) ->
                         ClientProcs = ~p.~n"
                         , [NewBanker#banker.cash_on_hand, NewBanker#banker.client_procs]),
             main(NewBanker)
-    %after 0 ->
-        %_ ->
-        %    throw(unexpected_banker_message)
     end.
-
-%% get_clients/1
-%% Get the #client records from a list of Client processes.
-%% Arguments:
-%%  ClientProcs: the list of Client processes.
-%% Returns:
-%%  Clients: the list of #client records.
-%%get_clients(ClientProcs) -> h_get_clients(ClientProcs, []).
-%%h_get_clients([], Clients) -> Clients;
-%%h_get_clients([PH | PT], Clients) ->
-%%    PH ! {self(), getclient},
-%%    receive
-%%        {client, Client} ->
-%%            NewClients = [Client | Clients]
-%%    end,
-%%    h_get_clients(PT, NewClients).
-
     
 %% compare_clients/2
 %% Defines the sorting order for clients. (From least claim to greatest claim.)
@@ -241,7 +219,7 @@ notify_waiting_clients() ->
                         request.~n"
                         , [Pid]),
             Pid ! try_again,
-            notify_waiting_clients()
+            notify_waiting_clients()    % not tail recursive
     after 0 ->
         io:format(  "(notify_waiting_clients) Banker has finished notifying waiting Clients.~n", []),
         ok
