@@ -34,7 +34,7 @@
 %%  Capital - the specified capital amount with which to begin
 start(Capital) ->
     Banker = #banker{capital = Capital, cash_on_hand = Capital},
-    register(banker, spawn(banker, main, [Banker])).
+    register(banker, spawn(fun() -> main(Banker) end)).
 
 %% status/0
 %% Reports the status of the system.
@@ -106,49 +106,53 @@ main(Banker) ->
     receive
         {Pid, status} ->
             io:format(  "Banker status was requested. CashOnHand = ~p, 
-                        ClientProcs = ~p.~n",
-                        [CashOnHand, ClientProcs]),
-            NewBanker = Banker,
-            Pid ! { Capital, CashOnHand, length(ClientProcs)};
+                        ClientProcs = ~p.~n"
+                        , [CashOnHand, ClientProcs]),
+            Pid ! { Capital, CashOnHand, length(ClientProcs)},
+            main(Banker);
         {Pid, attach, Limit} ->
             NewBanker = #banker { capital = Capital
                                 , cash_on_hand = CashOnHand
                                 , client_procs = [Pid | ClientProcs]
                                 },
-            link(Pid);
+            link(Pid),
+            main(NewBanker);
         {Pid, request, NUnits} ->
             Clients = get_clients(ClientProcs),
-            lists:sort(compare_clients, Clients),
-            case is_safe_state(Clients, CashOnHand) of
+            Compare_Clients = fun(C1, C2) -> compare_clients(C1, C2) end,
+            lists:sort(Compare_Clients, Clients),
+            NewBanker = case is_safe_state(Clients, CashOnHand) of
                 true ->
                     Pid ! ok,
-                    NewBanker = #banker { capital = Capital
-                                        , cash_on_hand = CashOnHand - NUnits
-                                        , clients = ClientProcs
-                                        };
+                    #banker { capital = Capital
+                            , cash_on_hand = CashOnHand - NUnits
+                            , client_procs = ClientProcs
+                            };
                 false ->
                     Pid ! {self(), unsafe}
-            end;
+            end,
+            main(NewBanker);
         {Pid, release, NUnits} ->
             NewBanker = #banker { capital = Capital
                                 , cash_on_hand = CashOnHand + NUnits
-                                , clients = ClientProcs
-                                };
-            io:format(  "Banker is notifying waiting Clients to try again.~n",
-                        []),
-            notify_waiting_clients();
-        {'EXIT', Pid, {finished, Loan} ->
-            io:format(  "Banker reclaims ~p resources from exiting Client.~n",
-                        [Loan]),
+                                , client_procs = ClientProcs
+                                },
+            io:format(  "Banker is notifying waiting Clients to try again.~n"
+                        , []),
+            notify_waiting_clients(),
+            main(NewBanker);
+        {'EXIT', Pid, {finished, Loan}} ->
+            io:format(  "Banker reclaims ~p resources from exiting Client ~p.~n"
+                        , [Loan, Pid]),
             NewBanker = #banker { capital = Capital
                                 , cash_on_hand = CashOnHand + Loan
-                                , clients = delete(Pid, ClientProcs)
-                                }
-    after 0 ->
+                                , client_procs = lists:delete(Pid, ClientProcs)
+                                },
+            main(NewBanker)
+    %after 0 ->
         %_ ->
         %    throw(unexpected_banker_message)
-    end,
-    main(NewBanker).
+    end.
 
 %% get_clients/1
 %% Get the #client records from a list of Client processes.
@@ -168,7 +172,7 @@ h_get_clients([PH | PT], Clients) ->
 
     
 %% compare_clients/2
-%% Compare two clients based on remaining claim.
+%% Defines the sorting order for clients. (From least claim to greatest claim.)
 %% Arguments:
 %%  C1: a Client record
 %%  C2: a different Client record
@@ -186,10 +190,10 @@ is_safe_state([], _) ->
     true;
 is_safe_state([CH | CT], CashOnHand) ->
     if
-        CH.client#claim > CashOnHand ->
+        CH#client.claim > CashOnHand ->
             false;
-        CH.client#claim =< CashOnHand ->
-            is_safe_state(CT, CashOnHand + CH.client#loan)
+        CH#client.claim =< CashOnHand ->
+            is_safe_state(CT, CashOnHand + CH#client.loan)
     end.
 
 %% notify_waiting_clients/0
@@ -201,8 +205,8 @@ notify_waiting_clients() ->
     receive
         {Pid, waiting} ->
             io:format(  "Banker is notifying waiting Client ~p to retry its
-                        request.~n",
-                        [Pid]),
+                        request.~n"
+                        , [Pid]),
             Pid ! try_again,
             notify_waiting_clients()
     after 0 ->
