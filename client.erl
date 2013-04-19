@@ -62,7 +62,11 @@ client_loop(Client, 0) ->
 client_loop(Client, N) ->
     receive
         {Pid, getclient} ->
-            Pid ! Client
+            Pid ! Client;
+        {Pid, getclaim} ->
+            Pid ! Client#client.claim;
+        {Pid, getloan} ->
+            Pid ! Client#client.loan
     after 0 ->
         Capital = case whereis(banker) of
             unregistered ->
