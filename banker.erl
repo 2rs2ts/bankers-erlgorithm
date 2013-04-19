@@ -109,13 +109,15 @@ main(Banker) ->
                         , [CashOnHand, ClientProcs]),
             Pid ! { Capital, CashOnHand, length(ClientProcs)},
             main(Banker);
-        {Pid, attach, Limit} ->
+        {Pid, attach, Limit} when Limit =< Capital ->
             NewBanker = #banker { capital = Capital
                                 , cash_on_hand = CashOnHand
                                 , client_procs = [Pid | ClientProcs]
                                 },
             link(Pid),
             main(NewBanker);
+        {_Pid, attach, _Limit} ->
+            throw(limit_exceeds_capital);
         {Pid, request, NUnits} ->
             %Clients = get_clients(ClientProcs),
             Compare_Clients = fun(C1, C2) -> compare_clients(C1, C2) end,
@@ -131,7 +133,7 @@ main(Banker) ->
                     Pid ! {self(), unsafe}
             end,
             main(NewBanker);
-        {Pid, release, NUnits} ->
+        {_Pid, release, NUnits} ->
             NewBanker = #banker { capital = Capital
                                 , cash_on_hand = CashOnHand + NUnits
                                 , client_procs = ClientProcs
