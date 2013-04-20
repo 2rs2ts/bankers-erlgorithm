@@ -52,7 +52,8 @@ start(Limit, N) ->
                         io:format("(client start) Client ~p attached to Banker.~n", [self()]),
                         client_loop(C, X)
                         end,
-                    spawn(fun() -> ClientLoop(Client, N) end)
+                    % suggestion from http://stackoverflow.com/a/16113499/691859
+                    spawn(fun() -> process_flag(trap_exit, true), ClientLoop(Client, N) end)
             end
     end.
 
@@ -72,43 +73,61 @@ client_loop(Client, 0) ->
     exit({finished, Client#client.loan});
 client_loop(Client, N) ->
     try
-    io:format("(client_loop) Client ~p is on iteration ~p.~n", [self(), N]),
-    receive
-        {Pid, getclaim} ->
-            io:format("(client_loop) Banker requesting claim from Client ~p.~n", [self()]),
-            Pid ! {claim, Client#client.claim};
-        {Pid, getloan} ->
-            io:format("(client_loop) Banker requesting loan from Client ~p.~n", [self()]),
-            Pid ! {loan, Client#client.loan}
-    after 0 ->
-        random:seed(now()),
-        NewClient = case random:uniform(2) of
-            % Normal cases
-            1 when Client#client.claim > 0 ->
-                NUnits = random:uniform(Client#client.claim),
-                request(Client, NUnits);
-            2 when Client#client.loan > 0 ->
-                NUnits = random:uniform(Client#client.loan),
-                release(Client, NUnits);
-            % If guards fail
-            1 when Client#client.claim == 0 ->
-                NUnits = random:uniform(Client#client.loan),
-                release(Client, NUnits);
-            2 when Client#client.loan == 0 ->
-                NUnits = random:uniform(Client#client.claim),
-                request(Client, NUnits)
-        end,
-        {NewClient, N-1}
-    end
+        io:format("(client_loop) Client ~p is on iteration ~p.~n", [self(), N]),
+        receive
+            {Pid, getclaim} ->
+                io:format("(client_loop) Banker requesting claim from Client ~p.~n", [self()]),
+                Pid ! {claim, Client#client.claim};
+            {Pid, getloan} ->
+                io:format("(client_loop) Banker requesting loan from Client ~p.~n", [self()]),
+                Pid ! {loan, Client#client.loan}
+        after 0 ->
+            random:seed(now()),
+            NewClient = case random:uniform(2) of
+                % Normal cases
+                1 when Client#client.claim > 0 ->
+                    NUnits = random:uniform(Client#client.claim),
+                    request(Client, NUnits);
+                2 when Client#client.loan > 0 ->
+                    NUnits = random:uniform(Client#client.loan),
+                    release(Client, NUnits);
+                % If guards fail
+                1 when Client#client.claim == 0 ->
+                    NUnits = random:uniform(Client#client.loan),
+                    release(Client, NUnits);
+                2 when Client#client.loan == 0 ->
+                    NUnits = random:uniform(Client#client.claim),
+                    request(Client, NUnits)
+            end,
+            %client_loop(NewClient, N-1)
+            NewClient
+        end
     of
     %    {'EXIT', Reason} ->  io:format("(client_loop) Client ~p is being terminated.~n", [self()]),
     %        exit({terminated, Client#client.loan});
-        {NewClient2, N2} -> client_loop(NewClient2, N2)
+        NewClient2 -> NewClient2
     catch
-        _:_ ->
-            io:format("(client_loop) Client ~p is being terminated.~n", [self()]),
+        exit:_ ->
+            io:format("(client_loop) Client ~p caught exit.~n", [self()]),
             exit({terminated, Client#client.loan})
-    end.
+    %after
+    %    receive
+    %        {'EXIT', Pid2, {terminated, Loan}} ->
+    %            io:format("(client_loop) Client ~p is being terminated.~n", [Pid2]),
+    %            exit({terminated, Loan})
+    %    after 0 ->
+    %        client_loop(NewClient3, N-1)
+    %    end
+    end,
+    receive
+        {'EXIT', Pid2, {terminated, Loan}} ->
+            io:format("(client_loop) Client ~p is being terminated.~n", [Pid2]),
+            exit({terminated, Loan})
+    after 0 ->
+        ok
+    end,
+    client_loop(NewClient2, N-1).
+    
 
 %% request/2
 %% Send a loan request to the Banker

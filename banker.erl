@@ -129,16 +129,17 @@ main(Banker) ->
             io:format("(main) Banker is checking for safe state.~n", []),
             NewBanker = case is_safe_state(ClientProcs, CashOnHand) of
                 true ->
-                    io:format("(main) State is safe.~n",[]),
+                    io:format("(main) State is safe.~n", []),
                     Pid ! ok,
                     #banker { capital = Capital
                             , cash_on_hand = CashOnHand - NUnits
                             , client_procs = ClientProcs
                             };
                 false ->
-                    io:format("(main) State is not safe.~n",[]),
+                    io:format("(main) State is not safe.~n", []),
                     Pid ! {self(), unsafe}
             end,
+            io:format("(main) Banker trying to kill Client!~n", []),
             exit(Pid, diediedie),
             main(NewBanker);
         {Pid, release, NUnits} ->
