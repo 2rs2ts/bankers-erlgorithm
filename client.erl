@@ -141,7 +141,7 @@ request(Client, NUnits) ->
     receive
         {Pid, getclaim} ->
             io:format("(request) Banker requesting claim from Client ~p.~n", [self()]),
-            Pid ! {claim, Client#client.claim};
+            Pid ! {claim, Client#client.claim}
         %{'EXIT', MyPid, Reason2} ->
         %    io:format("(client_loop) Client ~p is being terminated for the following reason: ~p. Has loan of: ~p.~n", [MyPid, Reason2, Client#client.loan]),
         %    exit({terminated, Client#client.loan})
