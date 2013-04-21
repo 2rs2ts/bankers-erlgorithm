@@ -32,7 +32,8 @@
 %%  Capital - the specified capital amount with which to begin
 start(Capital) ->
     Banker = #banker{capital = Capital, cash_on_hand = Capital},
-    register(banker, spawn(fun() -> main(Banker) end)).
+    register(banker, spawn(fun() -> main(Banker) end)),
+    io:format("Banker started. Pid = ~p.~n", [whereis(banker)]).
 
 %% status/0
 %% Reports the status of the system.
@@ -122,8 +123,8 @@ main(Banker) ->
         {Pid, request, NUnits} ->
             io:format(  "(main) Client ~p requesting ~p resources from Banker.~n"
                         , [Pid, NUnits]),
-            io:format("(main) Banker trying to kill Client!~n", []),
-            exit(Pid, diediedie),
+            io:format("(main) Banker trying to kill Client ~p!~n", [Pid]),
+            exit(Pid, die_before_request),
             Compare_Clients = fun(C1, C2) -> compare_clients(C1, C2) end,
             io:format("(main) Banker is sorting clients.~n", []),
             lists:sort(Compare_Clients, ClientProcs),
@@ -141,14 +142,17 @@ main(Banker) ->
                     io:format("(main) State is not safe.~n", []),
                     Pid ! {self(), unsafe}
             end,
-            io:format("(main) Banker trying to kill Client!~n", []),
-            exit(Pid, diediedie),
+            io:format("(main) Banker trying to kill Client ~p!~n", [Pid]),
+            exit(Pid, die_after_request),
+            io:format(  "(main) Banker status is now: CashOnHand = ~p, 
+                        ClientProcs = ~p.~n"
+                        , [NewBanker#banker.cash_on_hand, NewBanker#banker.client_procs]),
             main(NewBanker);
         {Pid, release, NUnits} ->
             io:format(  "(main) Client ~p releasing ~p resources from Banker.~n"
                         , [Pid, NUnits]),
-            io:format("(main) Banker trying to kill Client!~n", []),
-            exit(Pid, diediedie),
+            io:format("(main) Banker trying to kill Client ~p!~n", [Pid]),
+            exit(Pid, die_after_release),
             NewBanker = #banker { capital = Capital
                                 , cash_on_hand = CashOnHand + NUnits
                                 , client_procs = ClientProcs
@@ -157,6 +161,9 @@ main(Banker) ->
                         , []),
             notify_waiting_clients(),
             io:format(  "(main) Banker has finished notifying waiting Clients.~n", []),
+            io:format(  "(main) Banker status is now: CashOnHand = ~p, 
+                        ClientProcs = ~p.~n"
+                        , [NewBanker#banker.cash_on_hand, NewBanker#banker.client_procs]),
             main(NewBanker);
         {'EXIT', Pid, {finished, Loan}} ->
             io:format(  "(main) Banker reclaims ~p resources from exiting Client ~p.~n"
