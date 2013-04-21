@@ -122,6 +122,8 @@ main(Banker) ->
         {Pid, request, NUnits} ->
             io:format(  "(main) Client ~p requesting ~p resources from Banker.~n"
                         , [Pid, NUnits]),
+            io:format("(main) Banker trying to kill Client!~n", []),
+            exit(Pid, diediedie),
             Compare_Clients = fun(C1, C2) -> compare_clients(C1, C2) end,
             io:format("(main) Banker is sorting clients.~n", []),
             lists:sort(Compare_Clients, ClientProcs),
@@ -190,6 +192,7 @@ main(Banker) ->
 %%  C1: a Client record
 %%  C2: a different Client record
 compare_clients(C1, C2) ->
+    % Need to time out in case the process died.
     C1 ! {self(), getclaim},
     receive
         {claim, C1_claim} -> C1_claim
@@ -211,6 +214,7 @@ is_safe_state([], _) ->
     true;
 is_safe_state([CH | CT], CashOnHand) ->
     io:format("(is_safe_state) Banker is requesting claim from Client ~p.~n", [CH]),
+    % Need to time out in case the process died.
     CH ! {self(), getclaim},
     receive
         {claim, Claim} -> Claim
