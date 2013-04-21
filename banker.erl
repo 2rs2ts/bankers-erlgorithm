@@ -226,11 +226,13 @@ is_safe_state([CH | CT], CashOnHand) ->
     receive
         {claim, Claim} -> Claim
     end,
+    io:format("(is_safe_state) Client ~p has claim ~p.~n", [CH, Claim]),
     io:format("(is_safe_state) Banker is requesting loan from Client ~p.~n", [CH]),
     CH ! {self(), getloan},
     receive
         {loan, Loan} -> Loan
     end,
+    io:format("(is_safe_state) Client ~p has loan ~p.~n", [CH, Loan]),
     if
         Claim > CashOnHand ->
             false;
