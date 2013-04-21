@@ -107,8 +107,8 @@ client_loop(Client, N) ->
     %        exit({terminated, Client#client.loan});
     %    NewClient2 -> NewClient2
     catch
-        exit:_ ->
-            io:format("(client_loop) Client ~p caught exit.~n", [self()]),
+        exit:Reason ->
+            io:format("(client_loop) Client ~p caught exit for the following reason: ~p, before it was able to complete its request.~n", [self(), Reason]),
             exit({terminated, Client#client.loan})
     %after
     %    receive
@@ -120,9 +120,9 @@ client_loop(Client, N) ->
     %    end
     end,
     receive
-        {'EXIT', Pid2, {terminated, Loan}} ->
-            io:format("(client_loop) Client ~p is being terminated.~n", [Pid2]),
-            exit({terminated, Loan})
+        {'EXIT', MyPid, Reason2} ->
+            io:format("(client_loop) Client ~p is being terminated for the following reason: ~p. Has loan of: ~p.~n", [MyPid, Reason2, Client#client.loan]),
+            exit({terminated, NewClient#client.loan})
     after 0 ->
         client_loop(NewClient, N-1)
     end.
