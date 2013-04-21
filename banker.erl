@@ -145,6 +145,8 @@ main(Banker) ->
         {Pid, release, NUnits} ->
             io:format(  "(main) Client ~p releasing ~p resources from Banker.~n"
                         , [Pid, NUnits]),
+            io:format("(main) Banker trying to kill Client!~n", []),
+            exit(Pid, diediedie),
             NewBanker = #banker { capital = Capital
                                 , cash_on_hand = CashOnHand + NUnits
                                 , client_procs = ClientProcs
