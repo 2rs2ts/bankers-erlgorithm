@@ -50,6 +50,7 @@ start(Limit, N) ->
                             , [self(), C#client.limit]),
                         banker:attach(C#client.limit),
                         io:format("(client start) Client ~p attached to Banker.~n", [self()]),
+                        banker:status(),
                         client_loop(C, X)
                         end,
                     % suggestion from http://stackoverflow.com/a/16113499/691859
