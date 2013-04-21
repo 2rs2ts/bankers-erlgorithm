@@ -72,7 +72,7 @@ client_loop(Client, 0) ->
     io:format("(client_loop) Client ~p is exiting.~n", [self()]),
     exit({finished, Client#client.loan});
 client_loop(Client, N) ->
-    try
+    NewClient = try
         io:format("(client_loop) Client ~p is on iteration ~p.~n", [self(), N]),
         receive
             {Pid, getclaim} ->
@@ -83,7 +83,7 @@ client_loop(Client, N) ->
                 Pid ! {loan, Client#client.loan}
         after 0 ->
             random:seed(now()),
-            NewClient = case random:uniform(2) of
+            NewClient_try = case random:uniform(2) of
                 % Normal cases
                 1 when Client#client.claim > 0 ->
                     NUnits = random:uniform(Client#client.claim),
@@ -100,12 +100,12 @@ client_loop(Client, N) ->
                     request(Client, NUnits)
             end,
             %client_loop(NewClient, N-1)
-            NewClient
+            NewClient_try
         end
-    of
+    %of
     %    {'EXIT', Reason} ->  io:format("(client_loop) Client ~p is being terminated.~n", [self()]),
     %        exit({terminated, Client#client.loan});
-        NewClient2 -> NewClient2
+    %    NewClient2 -> NewClient2
     catch
         exit:_ ->
             io:format("(client_loop) Client ~p caught exit.~n", [self()]),
@@ -124,9 +124,8 @@ client_loop(Client, N) ->
             io:format("(client_loop) Client ~p is being terminated.~n", [Pid2]),
             exit({terminated, Loan})
     after 0 ->
-        ok
-    end,
-    client_loop(NewClient2, N-1).
+        client_loop(NewClient, N-1)
+    end.
     
 
 %% request/2
