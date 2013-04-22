@@ -73,6 +73,10 @@ request(NUnits) ->
             throw(banker_not_registered);
         _ ->
             % could we poll for the claim and loan here?
+            % self() ! {banker, getclaim}
+            % self() ! {banker, getloan}
+            % banker ! {self(), request, NUnits, Claim, Loan}
+            % but then we need the others' claims and loans...
             banker ! {self(), request, NUnits}
     end.
 
