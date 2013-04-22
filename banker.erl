@@ -201,6 +201,8 @@ main(Banker) ->
 %%  C2: a different Client record
 compare_clients(C1, C2) ->
     % These requests are made during a Client request()
+    % We should answer these requests during our request but what if the other
+    % clients aren't requesting at that moment?
     % How many comparisons are done in lists:sort()?
     % Need to time out in case the process died?
     io:format("(compare_clients) Banker is requesting claim from Client ~p.~n", [C1]),
