@@ -155,6 +155,7 @@ request(Client, NUnits) ->
         %    io:format("(client_loop) Client ~p is being terminated for the following reason: ~p. Has loan of: ~p.~n", [MyPid, Reason2, Client#client.loan]),
         %    exit({terminated, Client#client.loan})
     end,
+    % this receive could block when only sorting in compare_clients
     receive
         {Pid1, getloan} ->
             io:format("(request) Banker requesting loan from Client ~p.~n", [self()]),
@@ -182,6 +183,8 @@ request(Client, NUnits) ->
                                 , [self(), NUnits]),
                     request(Client, NUnits)
             end
+        % match the getclaim and getloan requests too?
+        % when match, answer and then recurse? that would re-request
     end.
     
 %% release/2
