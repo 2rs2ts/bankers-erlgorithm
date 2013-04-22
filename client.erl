@@ -78,11 +78,16 @@ client_loop(Client, N) ->
         receive
             {Pid, getclaim} ->
                 io:format("(client_loop) Banker requesting claim from Client ~p.~n", [self()]),
-                Pid ! {claim, Client#client.claim};
-            {Pid, getloan} ->
+                Pid ! {claim, Client#client.claim}
+        after 0 -> ok
+        end,
+        receive
+            {Pid2, getloan} ->
                 io:format("(client_loop) Banker requesting loan from Client ~p.~n", [self()]),
-                Pid ! {loan, Client#client.loan}
-        after 0 ->
+                Pid2 ! {loan, Client#client.loan}
+        after 0 -> ok
+        end,
+        %after 0 ->
             random:seed(now()),
             NewClient_try = case random:uniform(2) of
                 % Normal cases
@@ -102,7 +107,7 @@ client_loop(Client, N) ->
             end,
             %client_loop(NewClient, N-1)
             NewClient_try
-        end
+        %end
     %of
     %    {'EXIT', Reason} ->  io:format("(client_loop) Client ~p is being terminated.~n", [self()]),
     %        exit({terminated, Client#client.loan});
@@ -153,6 +158,7 @@ request(Client, NUnits) ->
             Pid1 ! {loan, Client#client.loan}
     end,
     receive
+        % need to always be ready to receive getclaim and getloan
         ok ->
             io:format(  "(request) Client ~p request for ~p resources accepted.~n"
                         , [self(), NUnits]),
