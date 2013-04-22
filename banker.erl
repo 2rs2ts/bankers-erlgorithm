@@ -72,6 +72,7 @@ request(NUnits) ->
         unregistered ->
             throw(banker_not_registered);
         _ ->
+            % could we poll for the claim and loan here?
             banker ! {self(), request, NUnits}
     end.
 
