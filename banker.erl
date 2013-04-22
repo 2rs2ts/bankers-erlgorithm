@@ -123,8 +123,8 @@ main(Banker) ->
         {Pid, request, NUnits} ->
             io:format(  "(main) Client ~p requesting ~p resources from Banker.~n"
                         , [Pid, NUnits]),
-            io:format("(main) Banker trying to kill Client ~p!~n", [Pid]),
-            exit(Pid, die_before_request),
+            %io:format("(main) Banker trying to kill Client ~p!~n", [Pid]),
+            %exit(Pid, die_before_request),
             Compare_Clients = fun(C1, C2) -> compare_clients(C1, C2) end,
             io:format("(main) Banker is sorting clients.~n", []),
             lists:sort(Compare_Clients, ClientProcs),
@@ -142,8 +142,8 @@ main(Banker) ->
                     io:format("(main) State is not safe.~n", []),
                     Pid ! {self(), unsafe}
             end,
-            io:format("(main) Banker trying to kill Client ~p!~n", [Pid]),
-            exit(Pid, die_after_request),
+            %io:format("(main) Banker trying to kill Client ~p!~n", [Pid]),
+            %exit(Pid, die_after_request),
             io:format(  "(main) Banker status is now: CashOnHand = ~p, 
                         ClientProcs = ~p.~n"
                         , [NewBanker#banker.cash_on_hand, NewBanker#banker.client_procs]),
@@ -151,8 +151,8 @@ main(Banker) ->
         {Pid, release, NUnits} ->
             io:format(  "(main) Client ~p releasing ~p resources from Banker.~n"
                         , [Pid, NUnits]),
-            io:format("(main) Banker trying to kill Client ~p!~n", [Pid]),
-            exit(Pid, die_after_release),
+            %io:format("(main) Banker trying to kill Client ~p!~n", [Pid]),
+            %exit(Pid, die_after_release),
             NewBanker = #banker { capital = Capital
                                 , cash_on_hand = CashOnHand + NUnits
                                 , client_procs = ClientProcs
@@ -200,14 +200,18 @@ main(Banker) ->
 %%  C2: a different Client record
 compare_clients(C1, C2) ->
     % Need to time out in case the process died.
+    io:format("(compare_clients) Banker is requesting claim from Client ~p.~n", [C1]),
     C1 ! {self(), getclaim},
     receive
-        {claim, C1_claim} -> C1_claim
+        {C1, claim, C1_claim} -> C1_claim
     end,
+    io:format("(compare_clients) Client ~p has claim ~p.~n", [C1, C1_claim]),
+    io:format("(compare_clients) Banker is requesting claim from Client ~p.~n", [C2]),
     C2 ! {self(), getclaim},
     receive
-        {claim, C2_claim} -> C2_claim
+        {C2, claim, C2_claim} -> C2_claim
     end,
+    io:format("(compare_clients) Client ~p has claim ~p.~n", [C2, C2_claim]),
     C1_claim < C2_claim.
 
 %% is_safe_state/2
@@ -224,13 +228,13 @@ is_safe_state([CH | CT], CashOnHand) ->
     % Need to time out in case the process died.
     CH ! {self(), getclaim},
     receive
-        {claim, Claim} -> Claim
+        {CH, claim, Claim} -> Claim
     end,
     io:format("(is_safe_state) Client ~p has claim ~p.~n", [CH, Claim]),
     io:format("(is_safe_state) Banker is requesting loan from Client ~p.~n", [CH]),
     CH ! {self(), getloan},
     receive
-        {loan, Loan} -> Loan
+        {CH, loan, Loan} -> Loan
     end,
     io:format("(is_safe_state) Client ~p has loan ~p.~n", [CH, Loan]),
     if

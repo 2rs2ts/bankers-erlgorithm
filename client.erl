@@ -78,13 +78,13 @@ client_loop(Client, N) ->
         receive
             {Pid, getclaim} ->
                 io:format("(client_loop) Banker requesting claim from Client ~p.~n", [self()]),
-                Pid ! {claim, Client#client.claim}
+                Pid ! {self(), claim, Client#client.claim}
         after 0 -> ok
         end,
         receive
             {Pid2, getloan} ->
                 io:format("(client_loop) Banker requesting loan from Client ~p.~n", [self()]),
-                Pid2 ! {loan, Client#client.loan}
+                Pid2 ! {self(), loan, Client#client.loan}
         after 0 -> ok
         end,
         %after 0 ->
@@ -147,7 +147,7 @@ request(Client, NUnits) ->
     receive
         {Pid, getclaim} ->
             io:format("(request) Banker requesting claim from Client ~p.~n", [self()]),
-            Pid ! {claim, Client#client.claim}
+            Pid ! {self(), claim, Client#client.claim}
         %{'EXIT', MyPid, Reason2} ->
         %    io:format("(client_loop) Client ~p is being terminated for the following reason: ~p. Has loan of: ~p.~n", [MyPid, Reason2, Client#client.loan]),
         %    exit({terminated, Client#client.loan})
@@ -155,7 +155,7 @@ request(Client, NUnits) ->
     receive
         {Pid1, getloan} ->
             io:format("(request) Banker requesting loan from Client ~p.~n", [self()]),
-            Pid1 ! {loan, Client#client.loan}
+            Pid1 ! {self(), loan, Client#client.loan}
     end,
     receive
         % need to always be ready to receive getclaim and getloan
