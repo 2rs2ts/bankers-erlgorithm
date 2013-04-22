@@ -76,18 +76,19 @@ client_loop(Client, N) ->
     NewClient = try
         io:format("(client_loop) Client ~p is on iteration ~p.~n", [self(), N]),
         % which requests do these receives answer?
-        receive
-            {Pid, getclaim} ->
-                io:format("(client_loop) Banker requesting claim from Client ~p.~n", [self()]),
-                Pid ! {self(), claim, Client#client.claim}
-        after 0 -> ok
-        end,
-        receive
-            {Pid2, getloan} ->
-                io:format("(client_loop) Banker requesting loan from Client ~p.~n", [self()]),
-                Pid2 ! {self(), loan, Client#client.loan}
-        after 0 -> ok
-        end,
+        %receive
+        %    {Pid, getclaim} ->
+        %        io:format("(client_loop) Banker requesting claim from Client ~p.~n", [self()]),
+        %        Pid ! {self(), claim, Client#client.claim}
+        %after 0 -> ok
+        %end,
+        %receive
+        %    {Pid2, getloan} ->
+        %        io:format("(client_loop) Banker requesting loan from Client ~p.~n", [self()]),
+        %        Pid2 ! {self(), loan, Client#client.loan}
+        %after 0 -> ok
+        %end,
+        receive_state_requests(Client),
         %after 0 ->
             random:seed(now()),
             % must block on these requests so loop can't continue until you get an answer
@@ -147,20 +148,22 @@ request(Client, NUnits) ->
     io:format("(request) Client ~p is requesting ~p resources.~n", [self(), NUnits]),
     banker:request(NUnits),
     % these messages must answer the compare_clients and is_safe_state checks
-    receive
-        {Pid, getclaim} ->
-            io:format("(request) Banker requesting claim from Client ~p.~n", [self()]),
-            Pid ! {self(), claim, Client#client.claim}
+    %receive
+    %    {Pid, getclaim} ->
+    %        io:format("(request) Banker requesting claim from Client ~p.~n", [self()]),
+    %        Pid ! {self(), claim, Client#client.claim}
         %{'EXIT', MyPid, Reason2} ->
         %    io:format("(client_loop) Client ~p is being terminated for the following reason: ~p. Has loan of: ~p.~n", [MyPid, Reason2, Client#client.loan]),
         %    exit({terminated, Client#client.loan})
-    end,
+    %end,
     % this receive could block when only sorting in compare_clients
-    receive
-        {Pid1, getloan} ->
-            io:format("(request) Banker requesting loan from Client ~p.~n", [self()]),
-            Pid1 ! {self(), loan, Client#client.loan}
-    end,
+    %receive
+    %    {Pid1, getloan} ->
+    %        io:format("(request) Banker requesting loan from Client ~p.~n", [self()]),
+    %        Pid1 ! {self(), loan, Client#client.loan}
+    %end,
+    receive_state_requests(Client),
+    % don't move on to this step until you know you won't get another request?
     receive
         % need to always be ready to receive getclaim and getloan
         ok ->
@@ -202,3 +205,21 @@ release(Client, NUnits) ->
             , loan = Client#client.loan - NUnits
             , claim = Client#client.claim + NUnits
             }.
+
+%% receive_state_requests
+%% Continually process requests for Client state until there are none remaining.
+%% Arguments:
+%%  Client - the #client record
+receive_state_requests(Client) ->
+    receive
+        {Pid, getclaim} ->
+            io:format("(receive_state_requests) Banker requesting claim from Client ~p. Claim is ~p.~n", [self(), Client#client.claim]),
+            Pid ! Client#client.claim,
+            receive_state_requests(Client);
+        {Pid, getloan} ->
+            io:format("(receive_state_requests) Banker requesting loan from Client ~p. Claim is ~p.~n", [self(), Client#client.loan]),
+            Pid ! Client#client.loan,
+            receive_state_requests(Client)
+    after 0 ->
+        done
+    end.
