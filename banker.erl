@@ -127,6 +127,7 @@ main(Banker) ->
             %exit(Pid, die_before_request),
             Compare_Clients = fun(C1, C2) -> compare_clients(C1, C2) end,
             io:format("(main) Banker is sorting clients.~n", []),
+            % differentiate between these checks and safe_state check
             lists:sort(Compare_Clients, ClientProcs),
             io:format("(main) Banker sorted clients.~n", []),
             io:format("(main) Banker is checking for safe state.~n", []),
@@ -199,7 +200,9 @@ main(Banker) ->
 %%  C1: a Client record
 %%  C2: a different Client record
 compare_clients(C1, C2) ->
-    % Need to time out in case the process died.
+    % These requests are made during a Client request()
+    % How many comparisons are done in lists:sort()?
+    % Need to time out in case the process died?
     io:format("(compare_clients) Banker is requesting claim from Client ~p.~n", [C1]),
     C1 ! {self(), getclaim},
     receive
@@ -212,7 +215,7 @@ compare_clients(C1, C2) ->
         {C2, claim, C2_claim} -> C2_claim
     end,
     io:format("(compare_clients) Client ~p has claim ~p.~n", [C2, C2_claim]),
-    C1_claim < C2_claim.
+    C1_claim =< C2_claim.
 
 %% is_safe_state/2
 %% Check the list of Clients and determine if the state is safe.
@@ -224,8 +227,9 @@ compare_clients(C1, C2) ->
 is_safe_state([], _) ->
     true;
 is_safe_state([CH | CT], CashOnHand) ->
+    % These requests are made during a Client request().
     io:format("(is_safe_state) Banker is requesting claim from Client ~p.~n", [CH]),
-    % Need to time out in case the process died.
+    % Need to time out in case the process died?
     CH ! {self(), getclaim},
     receive
         {CH, claim, Claim} -> Claim

@@ -75,6 +75,7 @@ client_loop(Client, 0) ->
 client_loop(Client, N) ->
     NewClient = try
         io:format("(client_loop) Client ~p is on iteration ~p.~n", [self(), N]),
+        % which requests do these receives answer?
         receive
             {Pid, getclaim} ->
                 io:format("(client_loop) Banker requesting claim from Client ~p.~n", [self()]),
@@ -89,6 +90,7 @@ client_loop(Client, N) ->
         end,
         %after 0 ->
             random:seed(now()),
+            % must block on these requests so loop can't continue until you get an answer
             NewClient_try = case random:uniform(2) of
                 % Normal cases
                 1 when Client#client.claim > 0 ->
@@ -144,6 +146,7 @@ client_loop(Client, N) ->
 request(Client, NUnits) ->
     io:format("(request) Client ~p is requesting ~p resources.~n", [self(), NUnits]),
     banker:request(NUnits),
+    % these messages must answer the compare_clients and is_safe_state checks
     receive
         {Pid, getclaim} ->
             io:format("(request) Banker requesting claim from Client ~p.~n", [self()]),
