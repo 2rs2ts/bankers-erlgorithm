@@ -209,16 +209,19 @@ compare_clients(C1, C2) ->
     % We should answer these requests during our request but what if the other
     % clients aren't requesting at that moment?
     % How many comparisons are done in lists:sort()?
-    % Need to time out in case the process died?
     io:format("(compare_clients) Banker is requesting claim from Client ~p.~n", [C1]),
     C1 ! {self(), getclaim},
     receive
+        % This message is 100% vital to the algorithm and we have to block here.
+        % We have to check to see if the process is dead though.
         {C1, claim, C1_claim} -> C1_claim
     end,
     io:format("(compare_clients) Client ~p has claim ~p.~n", [C1, C1_claim]),
     io:format("(compare_clients) Banker is requesting claim from Client ~p.~n", [C2]),
     C2 ! {self(), getclaim},
     receive
+        % This message is 100% vital to the algorithm and we have to block here.
+        % We have to check to see if the process is dead though.
         {C2, claim, C2_claim} -> C2_claim
     end,
     io:format("(compare_clients) Client ~p has claim ~p.~n", [C2, C2_claim]),
@@ -239,12 +242,16 @@ is_safe_state([CH | CT], CashOnHand) ->
     % Need to time out in case the process died?
     CH ! {self(), getclaim},
     receive
+        % This message is 100% vital to the algorithm and we have to block here.
+        % We have to check to see if the process is dead though.
         {CH, claim, Claim} -> Claim
     end,
     io:format("(is_safe_state) Client ~p has claim ~p.~n", [CH, Claim]),
     io:format("(is_safe_state) Banker is requesting loan from Client ~p.~n", [CH]),
     CH ! {self(), getloan},
     receive
+        % This message is 100% vital to the algorithm and we have to block here.
+        % We have to check to see if the process is dead though.
         {CH, loan, Loan} -> Loan
     end,
     io:format("(is_safe_state) Client ~p has loan ~p.~n", [CH, Loan]),
