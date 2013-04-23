@@ -104,30 +104,34 @@ main(Banker) ->
     ClientProcs = Banker#banker.client_procs,
     receive
         {'EXIT', Pid, {finished, Loan}} ->
-            io:format(  "(main) Banker reclaims ~p resources from exiting Client ~p.~n"
+            io:format(  "(main) Banker reclaims ~p resources from exiting"
+                        " Client ~p.~n"
                         , [Loan, Pid]),
             NewBanker = #banker { capital = Capital
                                 , cash_on_hand = CashOnHand + Loan
                                 , client_procs = lists:delete(Pid, ClientProcs)
                                 },
-            io:format(  "(main) Banker status after exit: CashOnHand = ~p, 
-                        ClientProcs = ~p.~n"
-                        , [NewBanker#banker.cash_on_hand, NewBanker#banker.client_procs]),
+            io:format(  "(main) Banker status after exit: CashOnHand = ~p," 
+                        " ClientProcs = ~p.~n"
+                        , [NewBanker#banker.cash_on_hand
+                        , NewBanker#banker.client_procs]),
             main(NewBanker);
         {'EXIT', Pid, {terminated, Loan}} ->
-            io:format(  "(main) Banker reclaims ~p resources from terminated Client ~p.~n"
+            io:format(  "(main) Banker reclaims ~p resources from terminated"
+                        " Client ~p.~n"
                         , [Loan, Pid]),
             NewBanker = #banker { capital = Capital
                                 , cash_on_hand = CashOnHand + Loan
                                 , client_procs = lists:delete(Pid, ClientProcs)
                                 },
-            io:format(  "(main) Banker status after exit: CashOnHand = ~p, 
-                        ClientProcs = ~p.~n"
-                        , [NewBanker#banker.cash_on_hand, NewBanker#banker.client_procs]),
+            io:format(  "(main) Banker status after exit: CashOnHand = ~p,"
+                        " ClientProcs = ~p.~n"
+                        , [NewBanker#banker.cash_on_hand
+                        , NewBanker#banker.client_procs]),
             main(NewBanker);
         {Pid, status} ->
-            io:format(  "(main) Banker status was requested. CashOnHand = ~p, 
-                        ClientProcs = ~p.~n"
+            io:format(  "(main) Banker status was requested. CashOnHand = ~p,"
+                        " ClientProcs = ~p.~n"
                         , [CashOnHand, ClientProcs]),
             Pid ! { Capital, CashOnHand, length(ClientProcs)},
             main(Banker);
@@ -144,7 +148,8 @@ main(Banker) ->
         {_Pid, attach, _Limit} ->
             throw(limit_exceeds_capital);
         {Pid, request, NUnits} ->
-            io:format(  "(main) Client ~p requesting ~p resources from Banker.~n"
+            io:format(  "(main) Client ~p requesting ~p resources from"
+                        " Banker.~n"
                         , [Pid, NUnits]),
             Compare_Clients = fun(C1, C2) -> compare_clients(C1, C2) end,
             io:format("(main) Banker is sorting clients: ~p.~n", [ClientProcs]),
@@ -166,9 +171,10 @@ main(Banker) ->
                     Pid ! {self(), unsafe},
                     Banker
             end,
-            io:format(  "(main) Banker status is now: CashOnHand = ~p, 
-                        ClientProcs = ~p.~n"
-                        , [NewBanker#banker.cash_on_hand, NewBanker#banker.client_procs]),
+            io:format(  "(main) Banker status is now: CashOnHand = ~p,"
+                        " ClientProcs = ~p.~n"
+                        , [NewBanker#banker.cash_on_hand
+                        , NewBanker#banker.client_procs]),
             main(NewBanker);
         {Pid, release, NUnits} ->
             io:format(  "(main) Client ~p releasing ~p resources from Banker.~n"
@@ -177,16 +183,20 @@ main(Banker) ->
                                 , cash_on_hand = CashOnHand + NUnits
                                 , client_procs = ClientProcs
                                 },
-            io:format(  "(main) Banker is notifying waiting Clients to try again.~n"
+            io:format(  "(main) Banker is notifying waiting Clients to try"
+                        " again.~n"
                         , []),
             notify_waiting_clients(),
-            io:format(  "(main) Banker has finished notifying waiting Clients.~n", []),
-            io:format(  "(main) Banker status is now: CashOnHand = ~p, 
-                        ClientProcs = ~p.~n"
-                        , [NewBanker#banker.cash_on_hand, NewBanker#banker.client_procs]),
+            io:format(  "(main) Banker has finished notifying waiting Clients."
+                        "~n", []),
+            io:format(  "(main) Banker status is now: CashOnHand = ~p,"
+                        " ClientProcs = ~p.~n"
+                        , [NewBanker#banker.cash_on_hand
+                        , NewBanker#banker.client_procs]),
             main(NewBanker);
         {'EXIT', Pid, Reason} ->
-            io:format(  "(main) An unexpected exit from process ~p was caught with reason: ~p.~n"
+            io:format(  "(main) An unexpected exit from process ~p was caught"
+                        " with reason: ~p.~n"
                         , [Pid, Reason]),
             main(Banker)
     end.
@@ -197,69 +207,65 @@ main(Banker) ->
 %%  C1: a Client process
 %%  C2: a different Client process
 compare_clients(C1, C2) ->
-    % These requests are made during a Client request().
     case is_process_alive(C1) of
         true ->
-            io:format("(compare_clients) Banker is requesting claim from Client ~p.~n", [C1]),
+            io:format(  "(compare_clients) Banker is requesting claim from"
+                        " Client ~p.~n", [C1]),
             C1 ! {self(), getclaim},
             receive
-                % This message is 100% vital to the algorithm and we have to block here.
-                % We have to check to see if the process is dead though.
                 {C1, claim, C1_claim} -> C1_claim
-            after 1000 ->
+            after 100 ->
                 C1_claim = 0
             end,
-            io:format("(compare_clients) Client ~p has claim ~p.~n", [C1, C1_claim]);
+            io:format(  "(compare_clients) Client ~p has claim ~p.~n"
+                        , [C1, C1_claim]);
         false ->
             C1_claim = 0
     end,
     case is_process_alive(C2) of
         true ->
-            io:format("(compare_clients) Banker is requesting claim from Client ~p.~n", [C2]),
+            io:format(  "(compare_clients) Banker is requesting claim from"
+                        " Client ~p.~n", [C2]),
             C2 ! {self(), getclaim},
             receive
-                % This message is 100% vital to the algorithm and we have to block here.
-                % We have to check to see if the process is dead though.
                 {C2, claim, C2_claim} -> C2_claim
-            after 1000 ->
+            after 100 ->
                 C2_claim = 0
             end,
-            io:format("(compare_clients) Client ~p has claim ~p.~n", [C2, C2_claim]);
+            io:format(  "(compare_clients) Client ~p has claim ~p.~n"
+                        ,[C2, C2_claim]);
         false ->
             C2_claim = 0
     end,
     C1_claim =< C2_claim.
 
 %% is_safe_state/2
-%% Check the list of Clients and determine if the state is safe.
+%% Check the list of Client processes and determine if the state is safe.
 %% Arguments:
-%%  Clients: the list of Clients.
+%%  Clients: the list of Client processes.
 %%  NUnits: the number of resources requested by a Client.
 %% Returns:
 %%  true if state is safe, false is not.
 is_safe_state([], _) ->
     true;
 is_safe_state([CH | CT], CashOnHand) ->
-    % These requests are made during a Client request().
     case is_process_alive(CH) of
         true ->
-            io:format("(is_safe_state) Banker is requesting claim from Client ~p.~n", [CH]),
+            io:format(  "(is_safe_state) Banker is requesting claim from Client"
+                        " ~p.~n", [CH]),
             CH ! {self(), getclaim},
             receive
-                % This message is 100% vital to the algorithm and we have to block here.
-                % We have to check to see if the process is dead though.
                 {CH, claim, Claim} -> Claim
-            after 1000 ->
+            after 100 ->
                 Claim = 0
             end,
             io:format("(is_safe_state) Client ~p has claim ~p.~n", [CH, Claim]),
-            io:format("(is_safe_state) Banker is requesting loan from Client ~p.~n", [CH]),
+            io:format(  "(is_safe_state) Banker is requesting loan from Client"
+                        " ~p.~n", [CH]),
             CH ! {self(), getloan},
             receive
-            % This message is 100% vital to the algorithm and we have to block here.
-            % We have to check to see if the process is dead though.
             {CH, loan, Loan} -> Loan
-            after 1000 ->
+            after 100 ->
                 Loan = 0
             end,
             io:format("(is_safe_state) Client ~p has loan ~p.~n", [CH, Loan]);
@@ -282,8 +288,8 @@ is_safe_state([CH | CT], CashOnHand) ->
 notify_waiting_clients() ->
     receive
         {Pid, waiting} ->
-            io:format(  "(notify_waiting_clients) Banker is notifying waiting Client ~p to retry its
-                        request.~n"
+            io:format(  "(notify_waiting_clients) Banker is notifying waiting"
+                        " Client ~p to retry its request.~n"
                         , [Pid]),
             Pid ! try_again,
             notify_waiting_clients()
