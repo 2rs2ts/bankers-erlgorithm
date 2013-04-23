@@ -108,6 +108,28 @@ main(Banker) ->
     CashOnHand = Banker#banker.cash_on_hand,
     ClientProcs = Banker#banker.client_procs,
     receive
+        {'EXIT', Pid, {finished, Loan}} ->
+            io:format(  "(main) Banker reclaims ~p resources from exiting Client ~p.~n"
+                        , [Loan, Pid]),
+            NewBanker = #banker { capital = Capital
+                                , cash_on_hand = CashOnHand + Loan
+                                , client_procs = lists:delete(Pid, ClientProcs)
+                                },
+            io:format(  "(main) Banker status after exit: CashOnHand = ~p, 
+                        ClientProcs = ~p.~n"
+                        , [NewBanker#banker.cash_on_hand, NewBanker#banker.client_procs]),
+            main(NewBanker);
+        {'EXIT', Pid, {terminated, Loan}} ->
+            io:format(  "(main) Banker reclaims ~p resources from terminated Client ~p.~n"
+                        , [Loan, Pid]),
+            NewBanker = #banker { capital = Capital
+                                , cash_on_hand = CashOnHand + Loan
+                                , client_procs = lists:delete(Pid, ClientProcs)
+                                },
+            io:format(  "(main) Banker status after exit: CashOnHand = ~p, 
+                        ClientProcs = ~p.~n"
+                        , [NewBanker#banker.cash_on_hand, NewBanker#banker.client_procs]),
+            main(NewBanker);
         {Pid, status} ->
             io:format(  "(main) Banker status was requested. CashOnHand = ~p, 
                         ClientProcs = ~p.~n"
@@ -170,28 +192,6 @@ main(Banker) ->
             notify_waiting_clients(),
             io:format(  "(main) Banker has finished notifying waiting Clients.~n", []),
             io:format(  "(main) Banker status is now: CashOnHand = ~p, 
-                        ClientProcs = ~p.~n"
-                        , [NewBanker#banker.cash_on_hand, NewBanker#banker.client_procs]),
-            main(NewBanker);
-        {'EXIT', Pid, {finished, Loan}} ->
-            io:format(  "(main) Banker reclaims ~p resources from exiting Client ~p.~n"
-                        , [Loan, Pid]),
-            NewBanker = #banker { capital = Capital
-                                , cash_on_hand = CashOnHand + Loan
-                                , client_procs = lists:delete(Pid, ClientProcs)
-                                },
-            io:format(  "(main) Banker status after exit: CashOnHand = ~p, 
-                        ClientProcs = ~p.~n"
-                        , [NewBanker#banker.cash_on_hand, NewBanker#banker.client_procs]),
-            main(NewBanker);
-        {'EXIT', Pid, {terminated, Loan}} ->
-            io:format(  "(main) Banker reclaims ~p resources from terminated Client ~p.~n"
-                        , [Loan, Pid]),
-            NewBanker = #banker { capital = Capital
-                                , cash_on_hand = CashOnHand + Loan
-                                , client_procs = lists:delete(Pid, ClientProcs)
-                                },
-            io:format(  "(main) Banker status after exit: CashOnHand = ~p, 
                         ClientProcs = ~p.~n"
                         , [NewBanker#banker.cash_on_hand, NewBanker#banker.client_procs]),
             main(NewBanker);
@@ -277,6 +277,8 @@ notify_waiting_clients() ->
                         , [Pid]),
             Pid ! try_again,
             notify_waiting_clients()
+    after 0 ->
+        done
     end.
 
 %% polling_done/1
