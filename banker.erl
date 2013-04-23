@@ -171,7 +171,8 @@ main(Banker) ->
                 false ->
                     io:format("(main) State is not safe.~n", []),
                     Pid ! {self(), polling_done},
-                    Pid ! {self(), unsafe}
+                    Pid ! {self(), unsafe},
+                    Banker
             end,
             %io:format("(main) Banker trying to kill Client ~p!~n", [Pid]),
             %exit(Pid, die_after_request),
