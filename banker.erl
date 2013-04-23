@@ -104,6 +104,7 @@ main(Banker) ->
     ClientProcs = Banker#banker.client_procs,
     receive
         {'EXIT', Pid, {finished, Loan}} ->
+        % A normal exit by a Client.
             io:format(  "(main) Banker reclaims ~p resources from exiting"
                         " Client ~p.~n"
                         , [Loan, Pid]),
@@ -117,6 +118,7 @@ main(Banker) ->
                         , NewBanker#banker.client_procs]),
             main(NewBanker);
         {'EXIT', Pid, {terminated, Loan}} ->
+        % An abnormal exit (e.g. an external exit call) by a Client.
             io:format(  "(main) Banker reclaims ~p resources from terminated"
                         " Client ~p.~n"
                         , [Loan, Pid]),
@@ -143,6 +145,7 @@ main(Banker) ->
                                 },
             link(Pid),
             io:format("(main) Client ~p linked to Banker.~n", [Pid]),
+            % Acknowledge the finished attachment.
             Pid ! {attached},
             main(NewBanker);
         {_Pid, attach, _Limit} ->
@@ -159,6 +162,8 @@ main(Banker) ->
             NewBanker = case is_safe_state(SortedClients, CashOnHand) of
                 true ->
                     io:format("(main) State is safe.~n", []),
+                    % Let the Client which made this request proceed.
+                    % Others must wait until their request is processed.
                     Pid ! {self(), polling_done},
                     Pid ! ok,
                     #banker { capital = Capital
@@ -186,6 +191,8 @@ main(Banker) ->
             io:format(  "(main) Banker is notifying waiting Clients to try"
                         " again.~n"
                         , []),
+            % Released resources may have created a safe state.
+            % Notify waiting Clients that they should try again.
             notify_waiting_clients(),
             io:format(  "(main) Banker has finished notifying waiting Clients."
                         "~n", []),
