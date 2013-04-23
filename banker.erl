@@ -206,29 +206,39 @@ main(Banker) ->
 %% compare_clients/2
 %% Defines the sorting order for clients. (From least claim to greatest claim.)
 %% Arguments:
-%%  C1: a Client record
-%%  C2: a different Client record
+%%  C1: a Client process
+%%  C2: a different Client process
 compare_clients(C1, C2) ->
     % These requests are made during a Client request()
     % We should answer these requests during our request but what if the other
     % clients aren't requesting at that moment?
     % How many comparisons are done in lists:sort()?
     io:format("(compare_clients) Banker is requesting claim from Client ~p.~n", [C1]),
+    case is_process_alive(C1) of
+    true ->
     C1 ! {self(), getclaim},
     receive
         % This message is 100% vital to the algorithm and we have to block here.
         % We have to check to see if the process is dead though.
         {C1, claim, C1_claim} -> C1_claim
     end,
-    io:format("(compare_clients) Client ~p has claim ~p.~n", [C1, C1_claim]),
+    io:format("(compare_clients) Client ~p has claim ~p.~n", [C1, C1_claim]);
+    false ->
+        C1_claim = 0
+    end,
     io:format("(compare_clients) Banker is requesting claim from Client ~p.~n", [C2]),
+    case is_process_alive(C2) of
+    true ->
     C2 ! {self(), getclaim},
     receive
         % This message is 100% vital to the algorithm and we have to block here.
         % We have to check to see if the process is dead though.
         {C2, claim, C2_claim} -> C2_claim
     end,
-    io:format("(compare_clients) Client ~p has claim ~p.~n", [C2, C2_claim]),
+    io:format("(compare_clients) Client ~p has claim ~p.~n", [C2, C2_claim]);
+    false ->
+        C2_claim = 0
+    end,
     C1_claim =< C2_claim.
 
 %% is_safe_state/2
@@ -244,6 +254,8 @@ is_safe_state([CH | CT], CashOnHand) ->
     % These requests are made during a Client request().
     io:format("(is_safe_state) Banker is requesting claim from Client ~p.~n", [CH]),
     % Need to time out in case the process died?
+    case is_process_alive(CH) of
+    true ->
     CH ! {self(), getclaim},
     receive
         % This message is 100% vital to the algorithm and we have to block here.
@@ -258,7 +270,11 @@ is_safe_state([CH | CT], CashOnHand) ->
         % We have to check to see if the process is dead though.
         {CH, loan, Loan} -> Loan
     end,
-    io:format("(is_safe_state) Client ~p has loan ~p.~n", [CH, Loan]),
+    io:format("(is_safe_state) Client ~p has loan ~p.~n", [CH, Loan]);
+    false ->
+    Claim = 0,
+    Loan = 0
+    end,
     if
         Claim > CashOnHand ->
             false;
