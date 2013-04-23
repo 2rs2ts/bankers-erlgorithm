@@ -174,10 +174,10 @@ request(Client, NUnits) ->
                                 , loan = Client#client.loan + NUnits
                                 , claim = Client#client.claim - NUnits
                                 };
-        {Pid2, unsafe} ->
+        {Pid, unsafe} ->
             io:format(  "(request) Client ~p request for ~p resources denied.~n"
                         , [self(), NUnits]),
-            Pid2 ! {self(), waiting},
+            Pid ! {self(), waiting},
             io:format("(request) Client ~p is waiting.~n", [self()]),
             receive
                 try_again ->
@@ -207,7 +207,8 @@ release(Client, NUnits) ->
             }.
 
 %% receive_state_requests
-%% Continually process requests for Client state until there are none remaining.
+%% Continually process requests for Client state until the polling_done message
+%% is received.
 %% Arguments:
 %%  Client - the #client record
 receive_state_requests(Client) ->
@@ -219,7 +220,7 @@ receive_state_requests(Client) ->
         {Pid, getloan} ->
             io:format("(receive_state_requests) Banker requesting loan from Client ~p. Claim is ~p.~n", [self(), Client#client.loan]),
             Pid ! Client#client.loan,
-            receive_state_requests(Client)
-    after 0 ->
-        done
+            receive_state_requests(Client);
+        {_Pid, polling_done} ->
+            done
     end.

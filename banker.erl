@@ -139,6 +139,7 @@ main(Banker) ->
             NewBanker = case is_safe_state(ClientProcs, CashOnHand) of
                 true ->
                     io:format("(main) State is safe.~n", []),
+                    polling_done(ClientProcs),
                     Pid ! ok,
                     #banker { capital = Capital
                             , cash_on_hand = CashOnHand - NUnits
@@ -146,6 +147,7 @@ main(Banker) ->
                             };
                 false ->
                     io:format("(main) State is not safe.~n", []),
+                    polling_done(ClientProcs),
                     Pid ! {self(), unsafe}
             end,
             %io:format("(main) Banker trying to kill Client ~p!~n", [Pid]),
@@ -276,3 +278,14 @@ notify_waiting_clients() ->
             Pid ! try_again,
             notify_waiting_clients()
     end.
+
+%% polling_done/1
+%% Go through list of Client procs which have been polled for their state
+%% and notify them that they won't be expected to provide their state until
+%% a later time.
+%% Arguments:
+%%  [CH | CT] - a list of Client processes.
+polling_done([]) -> done;
+polling_done([CH | CT]) ->
+    CH ! {self(), polling_done},
+    polling_done(CT).
