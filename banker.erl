@@ -144,6 +144,7 @@ main(Banker) ->
                                 },
             link(Pid),
             io:format("(main) Client ~p linked to Banker.~n", [Pid]),
+            Pid ! {attached},
             main(NewBanker);
         {_Pid, attach, _Limit} ->
             throw(limit_exceeds_capital);

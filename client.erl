@@ -35,11 +35,11 @@ start(Limit, N) ->
         unregistered ->
             throw(banker_not_registered);
         _ ->
-            {Capital, _, _} = banker:status(),
-            if
-                Limit > Capital ->
-                    erlang:error(badarg);
-                Limit =< Capital ->
+            %{Capital, _, _} = banker:status(),
+            %if
+            %    Limit > Capital ->
+            %        erlang:error(badarg);
+            %    Limit =< Capital ->
                     Client = #client{limit = Limit, claim = Limit},
                     io:format(  "(client start) A new Client is being spawned with limit = ~p.
                                 ~n"
@@ -50,13 +50,16 @@ start(Limit, N) ->
                             , [self(), C#client.limit]),
                         banker:attach(C#client.limit),
                         % need to wait to know you are attached!
+                        receive
+                            {attached} -> ok
+                        end,
                         io:format("(client start) Client ~p attached to Banker.~n", [self()]),
                         %banker:status(),
                         client_loop(C, X)
                         end,
                     % suggestion from http://stackoverflow.com/a/16113499/691859
                     spawn(fun() -> process_flag(trap_exit, true), ClientLoop(Client, N) end)
-            end
+            %end
     end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
