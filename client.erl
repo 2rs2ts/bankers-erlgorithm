@@ -88,7 +88,7 @@ client_loop(Client, N) ->
         %        Pid2 ! {self(), loan, Client#client.loan}
         %after 0 -> ok
         %end,
-        receive_state_requests(Client),
+        %receive_state_requests(Client),
         %after 0 ->
             random:seed(now()),
             % must block on these requests so loop can't continue until you get an answer

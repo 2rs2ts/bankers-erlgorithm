@@ -287,5 +287,6 @@ notify_waiting_clients() ->
 %%  [CH | CT] - a list of Client processes.
 polling_done([]) -> done;
 polling_done([CH | CT]) ->
+    io:format("(polling_done) Notifying Client ~p that polling is done.~n", [CH]),
     CH ! {self(), polling_done},
     polling_done(CT).
