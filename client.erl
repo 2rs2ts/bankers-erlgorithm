@@ -92,7 +92,8 @@ client_loop(Client, N) ->
         %after 0 ->
             random:seed(now()),
             % must block on these requests so loop can't continue until you get an answer
-            NewClient_try = case random:uniform(2) of
+            %NewClient_try = 
+            case random:uniform(2) of
                 % Normal cases
                 1 when Client#client.claim > 0 ->
                     NUnits = random:uniform(Client#client.claim),
@@ -107,9 +108,9 @@ client_loop(Client, N) ->
                 2 when Client#client.loan == 0 ->
                     NUnits = random:uniform(Client#client.claim),
                     request(Client, NUnits)
-            end,
+            end
             %client_loop(NewClient, N-1)
-            NewClient_try
+            %NewClient_try
         %end
     %of
     %    {'EXIT', Reason} ->  io:format("(client_loop) Client ~p is being terminated.~n", [self()]),
