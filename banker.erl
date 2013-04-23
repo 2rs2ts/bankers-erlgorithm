@@ -72,11 +72,6 @@ request(NUnits) ->
         unregistered ->
             throw(banker_not_registered);
         _ ->
-            % could we poll for the claim and loan here?
-            % self() ! {banker, getclaim}
-            % self() ! {banker, getloan}
-            % banker ! {self(), request, NUnits, Claim, Loan}
-            % but then we need the others' claims and loans...
             banker ! {self(), request, NUnits}
     end.
 
@@ -151,11 +146,8 @@ main(Banker) ->
         {Pid, request, NUnits} ->
             io:format(  "(main) Client ~p requesting ~p resources from Banker.~n"
                         , [Pid, NUnits]),
-            %io:format("(main) Banker trying to kill Client ~p!~n", [Pid]),
-            %exit(Pid, die_before_request),
             Compare_Clients = fun(C1, C2) -> compare_clients(C1, C2) end,
             io:format("(main) Banker is sorting clients: ~p.~n", [ClientProcs]),
-            % differentiate between these checks and safe_state check
             SortedClients = lists:sort(Compare_Clients, ClientProcs),
             io:format("(main) Banker sorted clients: ~p.~n", [SortedClients]),
             io:format("(main) Banker is checking for safe state.~n", []),
@@ -174,8 +166,6 @@ main(Banker) ->
                     Pid ! {self(), unsafe},
                     Banker
             end,
-            %io:format("(main) Banker trying to kill Client ~p!~n", [Pid]),
-            %exit(Pid, die_after_request),
             io:format(  "(main) Banker status is now: CashOnHand = ~p, 
                         ClientProcs = ~p.~n"
                         , [NewBanker#banker.cash_on_hand, NewBanker#banker.client_procs]),
@@ -183,8 +173,6 @@ main(Banker) ->
         {Pid, release, NUnits} ->
             io:format(  "(main) Client ~p releasing ~p resources from Banker.~n"
                         , [Pid, NUnits]),
-            %io:format("(main) Banker trying to kill Client ~p!~n", [Pid]),
-            %exit(Pid, die_after_release),
             NewBanker = #banker { capital = Capital
                                 , cash_on_hand = CashOnHand + NUnits
                                 , client_procs = ClientProcs
@@ -209,39 +197,36 @@ main(Banker) ->
 %%  C1: a Client process
 %%  C2: a different Client process
 compare_clients(C1, C2) ->
-    % These requests are made during a Client request()
-    % We should answer these requests during our request but what if the other
-    % clients aren't requesting at that moment?
-    % How many comparisons are done in lists:sort()?
-    io:format("(compare_clients) Banker is requesting claim from Client ~p.~n", [C1]),
+    % These requests are made during a Client request().
     case is_process_alive(C1) of
-    true ->
-    C1 ! {self(), getclaim},
-    receive
-        % This message is 100% vital to the algorithm and we have to block here.
-        % We have to check to see if the process is dead though.
-        {C1, claim, C1_claim} -> C1_claim
-    after 1000 ->
-        C1_claim = 0
+        true ->
+            io:format("(compare_clients) Banker is requesting claim from Client ~p.~n", [C1]),
+            C1 ! {self(), getclaim},
+            receive
+                % This message is 100% vital to the algorithm and we have to block here.
+                % We have to check to see if the process is dead though.
+                {C1, claim, C1_claim} -> C1_claim
+            after 1000 ->
+                C1_claim = 0
+            end,
+            io:format("(compare_clients) Client ~p has claim ~p.~n", [C1, C1_claim]);
+        false ->
+            C1_claim = 0
     end,
-    io:format("(compare_clients) Client ~p has claim ~p.~n", [C1, C1_claim]);
-    false ->
-        C1_claim = 0
-    end,
-    io:format("(compare_clients) Banker is requesting claim from Client ~p.~n", [C2]),
     case is_process_alive(C2) of
-    true ->
-    C2 ! {self(), getclaim},
-    receive
-        % This message is 100% vital to the algorithm and we have to block here.
-        % We have to check to see if the process is dead though.
-        {C2, claim, C2_claim} -> C2_claim
-    after 1000 ->
-        C2_claim = 0
-    end,
-    io:format("(compare_clients) Client ~p has claim ~p.~n", [C2, C2_claim]);
-    false ->
-        C2_claim = 0
+        true ->
+            io:format("(compare_clients) Banker is requesting claim from Client ~p.~n", [C2]),
+            C2 ! {self(), getclaim},
+            receive
+                % This message is 100% vital to the algorithm and we have to block here.
+                % We have to check to see if the process is dead though.
+                {C2, claim, C2_claim} -> C2_claim
+            after 1000 ->
+                C2_claim = 0
+            end,
+            io:format("(compare_clients) Client ~p has claim ~p.~n", [C2, C2_claim]);
+        false ->
+            C2_claim = 0
     end,
     C1_claim =< C2_claim.
 
@@ -256,32 +241,31 @@ is_safe_state([], _) ->
     true;
 is_safe_state([CH | CT], CashOnHand) ->
     % These requests are made during a Client request().
-    io:format("(is_safe_state) Banker is requesting claim from Client ~p.~n", [CH]),
-    % Need to time out in case the process died?
     case is_process_alive(CH) of
-    true ->
-    CH ! {self(), getclaim},
-    receive
-        % This message is 100% vital to the algorithm and we have to block here.
-        % We have to check to see if the process is dead though.
-        {CH, claim, Claim} -> Claim
-    after 1000 ->
-        Claim = 0
-    end,
-    io:format("(is_safe_state) Client ~p has claim ~p.~n", [CH, Claim]),
-    io:format("(is_safe_state) Banker is requesting loan from Client ~p.~n", [CH]),
-    CH ! {self(), getloan},
-    receive
-        % This message is 100% vital to the algorithm and we have to block here.
-        % We have to check to see if the process is dead though.
-        {CH, loan, Loan} -> Loan
-    after 1000 ->
-        Loan = 0
-    end,
-    io:format("(is_safe_state) Client ~p has loan ~p.~n", [CH, Loan]);
-    false ->
-    Claim = 0,
-    Loan = 0
+        true ->
+            io:format("(is_safe_state) Banker is requesting claim from Client ~p.~n", [CH]),
+            CH ! {self(), getclaim},
+            receive
+                % This message is 100% vital to the algorithm and we have to block here.
+                % We have to check to see if the process is dead though.
+                {CH, claim, Claim} -> Claim
+            after 1000 ->
+                Claim = 0
+            end,
+            io:format("(is_safe_state) Client ~p has claim ~p.~n", [CH, Claim]),
+            io:format("(is_safe_state) Banker is requesting loan from Client ~p.~n", [CH]),
+            CH ! {self(), getloan},
+            receive
+            % This message is 100% vital to the algorithm and we have to block here.
+            % We have to check to see if the process is dead though.
+            {CH, loan, Loan} -> Loan
+            after 1000 ->
+                Loan = 0
+            end,
+            io:format("(is_safe_state) Client ~p has loan ~p.~n", [CH, Loan]);
+        false ->
+            Claim = 0,
+            Loan = 0
     end,
     if
         Claim > CashOnHand ->
@@ -306,15 +290,3 @@ notify_waiting_clients() ->
     after 0 ->
         done
     end.
-
-%% polling_done/1
-%% Go through list of Client procs which have been polled for their state
-%% and notify them that they won't be expected to provide their state until
-%% a later time.
-%% Arguments:
-%%  [CH | CT] - a list of Client processes.
-polling_done([]) -> done;
-polling_done([CH | CT]) ->
-    io:format("(polling_done) Notifying Client ~p that polling is done.~n", [CH]),
-    CH ! {self(), polling_done},
-    polling_done(CT).
