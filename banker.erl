@@ -162,7 +162,7 @@ main(Banker) ->
             NewBanker = case is_safe_state(SortedClients, CashOnHand) of
                 true ->
                     io:format("(main) State is safe.~n", []),
-                    polling_done(SortedClients),
+                    Pid ! {self(), polling_done},
                     Pid ! ok,
                     #banker { capital = Capital
                             , cash_on_hand = CashOnHand - NUnits
@@ -170,7 +170,7 @@ main(Banker) ->
                             };
                 false ->
                     io:format("(main) State is not safe.~n", []),
-                    polling_done(SortedClients),
+                    Pid ! {self(), polling_done},
                     Pid ! {self(), unsafe}
             end,
             %io:format("(main) Banker trying to kill Client ~p!~n", [Pid]),

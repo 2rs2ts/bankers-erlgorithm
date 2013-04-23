@@ -139,7 +139,7 @@ client_loop(Client, N) ->
             exit({terminated, NewClient#client.loan})
     after 0 ->
         io:format("(client_loop) Client ~p iteration ~p complete.~n", [self(), N]),
-        receive_state_requests(NewClient),
+        %receive_state_requests(NewClient),
         client_loop(NewClient, N-1)
     end.
     
