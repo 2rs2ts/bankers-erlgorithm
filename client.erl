@@ -215,11 +215,11 @@ receive_state_requests(Client) ->
     receive
         {Pid, getclaim} ->
             io:format("(receive_state_requests) Banker requesting claim from Client ~p. Claim is ~p.~n", [self(), Client#client.claim]),
-            Pid ! Client#client.claim,
+            Pid ! {self(), claim, Client#client.claim},
             receive_state_requests(Client);
         {Pid, getloan} ->
             io:format("(receive_state_requests) Banker requesting loan from Client ~p. Claim is ~p.~n", [self(), Client#client.loan]),
-            Pid ! Client#client.loan,
+            Pid ! {self(), loan, Client#client.loan},
             receive_state_requests(Client);
         {_Pid, polling_done} ->
             done

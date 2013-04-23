@@ -134,7 +134,7 @@ main(Banker) ->
             io:format("(main) Banker is sorting clients: ~p.~n", [ClientProcs]),
             % differentiate between these checks and safe_state check
             SortedClients = lists:sort(Compare_Clients, ClientProcs),
-            io:format("(main) Banker sorted clients.~n", []),
+            io:format("(main) Banker sorted clients: ~p.~n", [SortedClients]),
             io:format("(main) Banker is checking for safe state.~n", []),
             NewBanker = case is_safe_state(SortedClients, CashOnHand) of
                 true ->
