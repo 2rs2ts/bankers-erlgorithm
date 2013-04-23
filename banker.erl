@@ -221,6 +221,8 @@ compare_clients(C1, C2) ->
         % This message is 100% vital to the algorithm and we have to block here.
         % We have to check to see if the process is dead though.
         {C1, claim, C1_claim} -> C1_claim
+    after 1000 ->
+        C1_claim = 0
     end,
     io:format("(compare_clients) Client ~p has claim ~p.~n", [C1, C1_claim]);
     false ->
@@ -234,6 +236,8 @@ compare_clients(C1, C2) ->
         % This message is 100% vital to the algorithm and we have to block here.
         % We have to check to see if the process is dead though.
         {C2, claim, C2_claim} -> C2_claim
+    after 1000 ->
+        C2_claim = 0
     end,
     io:format("(compare_clients) Client ~p has claim ~p.~n", [C2, C2_claim]);
     false ->
@@ -261,6 +265,8 @@ is_safe_state([CH | CT], CashOnHand) ->
         % This message is 100% vital to the algorithm and we have to block here.
         % We have to check to see if the process is dead though.
         {CH, claim, Claim} -> Claim
+    after 1000 ->
+        Claim = 0
     end,
     io:format("(is_safe_state) Client ~p has claim ~p.~n", [CH, Claim]),
     io:format("(is_safe_state) Banker is requesting loan from Client ~p.~n", [CH]),
@@ -269,6 +275,8 @@ is_safe_state([CH | CT], CashOnHand) ->
         % This message is 100% vital to the algorithm and we have to block here.
         % We have to check to see if the process is dead though.
         {CH, loan, Loan} -> Loan
+    after 1000 ->
+        Loan = 0
     end,
     io:format("(is_safe_state) Client ~p has loan ~p.~n", [CH, Loan]);
     false ->
