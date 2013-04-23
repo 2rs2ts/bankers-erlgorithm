@@ -138,6 +138,8 @@ client_loop(Client, N) ->
             io:format("(client_loop) Client ~p is being terminated for the following reason: ~p. Has loan of: ~p.~n", [FromPid, Reason2, NewClient#client.loan]),
             exit({terminated, NewClient#client.loan})
     after 0 ->
+        io:format("(client_loop) Client ~p iteration ~p complete.~n", [self(), N]),
+        receive_state_requests(NewClient),
         client_loop(NewClient, N-1)
     end.
     
