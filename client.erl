@@ -36,24 +36,23 @@ start(Limit, N) ->
             throw(banker_not_registered);
         _ ->
             Client = #client{limit = Limit, claim = Limit},
-            io:format(  "(client start) A new Client is being spawned with limit = ~p.
-                        ~n"
+            io:format(  "(client start) A new Client is being spawned with"
+                        " limit = ~p.~n"
                         ,[Limit]),
-            ClientLoop = fun(C, X) ->
-                io:format(  "(client start) Client ~p is attaching to the Banker with a limit of
-                    ~p.~n"
-                    , [self(), C#client.limit]),
+            Loop = fun(C, X) ->
+                io:format(  "(client start) Client ~p is attaching to the"
+                            " Banker with a limit of ~p.~n"
+                            , [self(), C#client.limit]),
                 banker:attach(C#client.limit),
-                % need to wait to know you are attached!
                 receive
                     {attached} -> ok
                 end,
-                io:format("(client start) Client ~p attached to Banker.~n", [self()]),
-                %banker:status(),
+                io:format(  "(client start) Client ~p attached to Banker.~n"
+                            , [self()]),
                 client_loop(C, X)
                 end,
             % suggestion from http://stackoverflow.com/a/16113499/691859
-            spawn(fun() -> process_flag(trap_exit, true), ClientLoop(Client, N) end)
+            spawn(fun() -> process_flag(trap_exit, true), Loop(Client, N) end)
     end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -92,18 +91,22 @@ client_loop(Client, N) ->
         end
     catch
         exit:Reason ->
-            io:format("(client_loop) Client ~p caught exit for the following reason: ~p, before it was able to complete its request.~n", [self(), Reason]),
+            io:format(  "(client_loop) Client ~p caught exit for the following"
+                        " reason: ~p, before it was able to complete its"
+                        " request.~n", [self(), Reason]),
             exit({terminated, Client#client.loan})
     end,
     receive
         {'EXIT', FromPid, Reason2} ->
-            io:format("(client_loop) Client ~p is being terminated for the following reason: ~p. Has loan of: ~p.~n", [FromPid, Reason2, NewClient#client.loan]),
+            io:format(  "(client_loop) Client ~p is being terminated for the"
+                        " following reason: ~p. Has loan of: ~p.~n"
+                        , [FromPid, Reason2, NewClient#client.loan]),
             exit({terminated, NewClient#client.loan})
     after 0 ->
-        io:format("(client_loop) Client ~p iteration ~p complete.~n", [self(), N]),
+        io:format(  "(client_loop) Client ~p iteration ~p complete.~n",
+                    [self(), N]),
         client_loop(NewClient, N-1)
-    end.
-    
+    end.    
 
 %% request/2
 %% Send a loan request to the Banker
@@ -113,15 +116,19 @@ client_loop(Client, N) ->
 %% Returns:
 %%  the modified #client record (i.e., NewClient)
 request(Client, NUnits) ->
-    io:format("(request) Client ~p is requesting ~p resources.~n", [self(), NUnits]),
+    io:format(  "(request) Client ~p is requesting ~p resources.~n"
+                , [self(), NUnits]),
     banker:request(NUnits),
-    io:format("(request) Client ~p is prepared to receive state requests.~n", [self()]),
+    io:format(  "(request) Client ~p is prepared to receive state requests.~n"
+                , [self()]),
     receive_state_requests(Client),
     receive
         ok ->
-            io:format(  "(request) Client ~p request for ~p resources accepted.~n"
+            io:format(  "(request) Client ~p request for ~p resources accepted."
+                        "~n"
                         , [self(), NUnits]),
-            io:format("(request) Client ~p now has ~p resources.~n", [self(),Client#client.loan + NUnits]),
+            io:format(  "(request) Client ~p now has ~p resources.~n"
+                        , [self(),Client#client.loan + NUnits]),
             #client { limit = Client#client.limit
                                 , loan = Client#client.loan + NUnits
                                 , claim = Client#client.claim - NUnits
@@ -133,8 +140,8 @@ request(Client, NUnits) ->
             io:format("(request) Client ~p is waiting.~n", [self()]),
             receive
                 try_again ->
-                    io:format(  "(request) Client ~p is trying to request ~p resources
-                                again.~n"
+                    io:format(  "(request) Client ~p is trying to request ~p"
+                                " resources again.~n"
                                 , [self(), NUnits]),
                     request(Client, NUnits)
             end
@@ -148,9 +155,11 @@ request(Client, NUnits) ->
 %% Returns:
 %%  the modified #client record (i.e., NewClient)
 release(Client, NUnits) ->
-    io:format("(release) Client ~p is releasing ~p resources.~n", [self(), NUnits]),
+    io:format(  "(release) Client ~p is releasing ~p resources.~n"
+                , [self(), NUnits]),
     banker:release(NUnits),
-    io:format("(release) Client ~p now has ~p resources.~n", [self(),Client#client.loan - NUnits]),
+    io:format(  "(release) Client ~p now has ~p resources.~n"
+                , [self(),Client#client.loan - NUnits]),
     #client { limit = Client#client.limit
             , loan = Client#client.loan - NUnits
             , claim = Client#client.claim + NUnits
@@ -164,14 +173,19 @@ release(Client, NUnits) ->
 receive_state_requests(Client) ->
     receive
         {Pid, getclaim} ->
-            io:format("(receive_state_requests) Banker requesting claim from Client ~p. Claim is ~p.~n", [self(), Client#client.claim]),
+            io:format(  "(receive_state_requests) Banker requesting claim from"
+                        " Client ~p. Claim is ~p.~n"
+                        , [self(), Client#client.claim]),
             Pid ! {self(), claim, Client#client.claim},
             receive_state_requests(Client);
         {Pid, getloan} ->
-            io:format("(receive_state_requests) Banker requesting loan from Client ~p. Claim is ~p.~n", [self(), Client#client.loan]),
+            io:format(  "(receive_state_requests) Banker requesting loan from"
+                        " Client ~p. Claim is ~p.~n"
+                        , [self(), Client#client.loan]),
             Pid ! {self(), loan, Client#client.loan},
             receive_state_requests(Client);
         {_Pid, polling_done} ->
-            io:format("(receive_state_requests) Client ~p may move forward.~n", [self()]),
+            io:format(  "(receive_state_requests) Client ~p may move forward.~n"
+                        , [self()]),
             done
     end.
