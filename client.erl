@@ -35,31 +35,25 @@ start(Limit, N) ->
         unregistered ->
             throw(banker_not_registered);
         _ ->
-            %{Capital, _, _} = banker:status(),
-            %if
-            %    Limit > Capital ->
-            %        erlang:error(badarg);
-            %    Limit =< Capital ->
-                    Client = #client{limit = Limit, claim = Limit},
-                    io:format(  "(client start) A new Client is being spawned with limit = ~p.
-                                ~n"
-                                ,[Limit]),
-                    ClientLoop = fun(C, X) ->
-                        io:format(  "(client start) Client ~p is attaching to the Banker with a limit of
-                            ~p.~n"
-                            , [self(), C#client.limit]),
-                        banker:attach(C#client.limit),
-                        % need to wait to know you are attached!
-                        receive
-                            {attached} -> ok
-                        end,
-                        io:format("(client start) Client ~p attached to Banker.~n", [self()]),
-                        %banker:status(),
-                        client_loop(C, X)
-                        end,
-                    % suggestion from http://stackoverflow.com/a/16113499/691859
-                    spawn(fun() -> process_flag(trap_exit, true), ClientLoop(Client, N) end)
-            %end
+            Client = #client{limit = Limit, claim = Limit},
+            io:format(  "(client start) A new Client is being spawned with limit = ~p.
+                        ~n"
+                        ,[Limit]),
+            ClientLoop = fun(C, X) ->
+                io:format(  "(client start) Client ~p is attaching to the Banker with a limit of
+                    ~p.~n"
+                    , [self(), C#client.limit]),
+                banker:attach(C#client.limit),
+                % need to wait to know you are attached!
+                receive
+                    {attached} -> ok
+                end,
+                io:format("(client start) Client ~p attached to Banker.~n", [self()]),
+                %banker:status(),
+                client_loop(C, X)
+                end,
+            % suggestion from http://stackoverflow.com/a/16113499/691859
+            spawn(fun() -> process_flag(trap_exit, true), ClientLoop(Client, N) end)
     end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -79,59 +73,27 @@ client_loop(Client, 0) ->
 client_loop(Client, N) ->
     NewClient = try
         io:format("(client_loop) Client ~p is on iteration ~p.~n", [self(), N]),
-        % which requests do these receives answer?
-        %receive
-        %    {Pid, getclaim} ->
-        %        io:format("(client_loop) Banker requesting claim from Client ~p.~n", [self()]),
-        %        Pid ! {self(), claim, Client#client.claim}
-        %after 0 -> ok
-        %end,
-        %receive
-        %    {Pid2, getloan} ->
-        %        io:format("(client_loop) Banker requesting loan from Client ~p.~n", [self()]),
-        %        Pid2 ! {self(), loan, Client#client.loan}
-        %after 0 -> ok
-        %end,
-        %receive_state_requests(Client),
-        %after 0 ->
-            random:seed(now()),
-            % must block on these requests so loop can't continue until you get an answer
-            %NewClient_try = 
-            case random:uniform(2) of
-                % Normal cases
-                1 when Client#client.claim > 0 ->
-                    NUnits = random:uniform(Client#client.claim),
-                    request(Client, NUnits);
-                2 when Client#client.loan > 0 ->
-                    NUnits = random:uniform(Client#client.loan),
-                    release(Client, NUnits);
-                % If guards fail
-                1 when Client#client.claim == 0 ->
-                    NUnits = random:uniform(Client#client.loan),
-                    release(Client, NUnits);
-                2 when Client#client.loan == 0 ->
-                    NUnits = random:uniform(Client#client.claim),
-                    request(Client, NUnits)
-            end
-            %client_loop(NewClient, N-1)
-            %NewClient_try
-        %end
-    %of
-    %    {'EXIT', Reason} ->  io:format("(client_loop) Client ~p is being terminated.~n", [self()]),
-    %        exit({terminated, Client#client.loan});
-    %    NewClient2 -> NewClient2
+        random:seed(now()),
+        case random:uniform(2) of
+            % Normal cases
+            1 when Client#client.claim > 0 ->
+                NUnits = random:uniform(Client#client.claim),
+                request(Client, NUnits);
+            2 when Client#client.loan > 0 ->
+                NUnits = random:uniform(Client#client.loan),
+                release(Client, NUnits);
+            % If guards fail
+            1 when Client#client.claim == 0 ->
+                NUnits = random:uniform(Client#client.loan),
+                release(Client, NUnits);
+            2 when Client#client.loan == 0 ->
+                NUnits = random:uniform(Client#client.claim),
+                request(Client, NUnits)
+        end
     catch
         exit:Reason ->
             io:format("(client_loop) Client ~p caught exit for the following reason: ~p, before it was able to complete its request.~n", [self(), Reason]),
             exit({terminated, Client#client.loan})
-    %after
-    %    receive
-    %        {'EXIT', Pid2, {terminated, Loan}} ->
-    %            io:format("(client_loop) Client ~p is being terminated.~n", [Pid2]),
-    %            exit({terminated, Loan})
-    %    after 0 ->
-    %        client_loop(NewClient3, N-1)
-    %    end
     end,
     receive
         {'EXIT', FromPid, Reason2} ->
@@ -139,7 +101,6 @@ client_loop(Client, N) ->
             exit({terminated, NewClient#client.loan})
     after 0 ->
         io:format("(client_loop) Client ~p iteration ~p complete.~n", [self(), N]),
-        %receive_state_requests(NewClient),
         client_loop(NewClient, N-1)
     end.
     
@@ -154,26 +115,9 @@ client_loop(Client, N) ->
 request(Client, NUnits) ->
     io:format("(request) Client ~p is requesting ~p resources.~n", [self(), NUnits]),
     banker:request(NUnits),
-    % these messages must answer the compare_clients and is_safe_state checks
-    %receive
-    %    {Pid, getclaim} ->
-    %        io:format("(request) Banker requesting claim from Client ~p.~n", [self()]),
-    %        Pid ! {self(), claim, Client#client.claim}
-        %{'EXIT', MyPid, Reason2} ->
-        %    io:format("(client_loop) Client ~p is being terminated for the following reason: ~p. Has loan of: ~p.~n", [MyPid, Reason2, Client#client.loan]),
-        %    exit({terminated, Client#client.loan})
-    %end,
-    % this receive could block when only sorting in compare_clients
-    %receive
-    %    {Pid1, getloan} ->
-    %        io:format("(request) Banker requesting loan from Client ~p.~n", [self()]),
-    %        Pid1 ! {self(), loan, Client#client.loan}
-    %end,
     io:format("(request) Client ~p is prepared to receive state requests.~n", [self()]),
     receive_state_requests(Client),
-    % don't move on to this step until you know you won't get another request?
     receive
-        % need to always be ready to receive getclaim and getloan
         ok ->
             io:format(  "(request) Client ~p request for ~p resources accepted.~n"
                         , [self(), NUnits]),
@@ -194,8 +138,6 @@ request(Client, NUnits) ->
                                 , [self(), NUnits]),
                     request(Client, NUnits)
             end
-        % match the getclaim and getloan requests too?
-        % when match, answer and then recurse? that would re-request
     end.
     
 %% release/2
@@ -208,7 +150,6 @@ request(Client, NUnits) ->
 release(Client, NUnits) ->
     io:format("(release) Client ~p is releasing ~p resources.~n", [self(), NUnits]),
     banker:release(NUnits),
-    %receive_state_requests(Client),
     io:format("(release) Client ~p now has ~p resources.~n", [self(),Client#client.loan - NUnits]),
     #client { limit = Client#client.limit
             , loan = Client#client.loan - NUnits
