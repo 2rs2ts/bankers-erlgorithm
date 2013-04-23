@@ -44,6 +44,7 @@ start(Limit, N) ->
                             " Banker with a limit of ~p.~n"
                             , [self(), C#client.limit]),
                 banker:attach(C#client.limit),
+                % Don't let client start running until it's fully attached.
                 receive
                     {attached} -> ok
                 end,
@@ -121,9 +122,13 @@ request(Client, NUnits) ->
     banker:request(NUnits),
     io:format(  "(request) Client ~p is prepared to receive state requests.~n"
                 , [self()]),
+    % It is necessary for the Banker to get Client state from all clients.
+    % Only the client which issued this request will get the polling_done msg.
+    % Others will wait until their request gets processed.
     receive_state_requests(Client),
     receive
         ok ->
+        % Request can be satisfied, update your state and proceed normally.
             io:format(  "(request) Client ~p request for ~p resources accepted."
                         "~n"
                         , [self(), NUnits]),
@@ -134,11 +139,13 @@ request(Client, NUnits) ->
                                 , claim = Client#client.claim - NUnits
                                 };
         {Pid, unsafe} ->
+        % Request cannot be satisfied. Mark yourself as waiting.
             io:format(  "(request) Client ~p request for ~p resources denied.~n"
                         , [self(), NUnits]),
             Pid ! {self(), waiting},
             io:format("(request) Client ~p is waiting.~n", [self()]),
             receive
+            % could this block?
                 try_again ->
                     io:format(  "(request) Client ~p is trying to request ~p"
                                 " resources again.~n"
@@ -159,7 +166,7 @@ release(Client, NUnits) ->
                 , [self(), NUnits]),
     banker:release(NUnits),
     io:format(  "(release) Client ~p now has ~p resources.~n"
-                , [self(),Client#client.loan - NUnits]),
+                , [self(), Client#client.loan - NUnits]),
     #client { limit = Client#client.limit
             , loan = Client#client.loan - NUnits
             , claim = Client#client.claim + NUnits
@@ -167,7 +174,8 @@ release(Client, NUnits) ->
 
 %% receive_state_requests
 %% Continually process requests for Client state until the polling_done message
-%% is received.
+%% is received. The purpose of this function is to make sure that a Client
+%% will return its state when the Banker needs it.
 %% Arguments:
 %%  Client - the #client record
 receive_state_requests(Client) ->
