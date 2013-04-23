@@ -144,13 +144,17 @@ request(Client, NUnits) ->
                         , [self(), NUnits]),
             Pid ! {self(), waiting},
             io:format("(request) Client ~p is waiting.~n", [self()]),
+            %receive_state_requests(Client),
             receive
-            % could this block?
                 try_again ->
                     io:format(  "(request) Client ~p is trying to request ~p"
                                 " resources again.~n"
                                 , [self(), NUnits]),
                     request(Client, NUnits)
+            after 1000 ->
+                io:format(  "(request) Client ~p timeout, trying again.~n"
+                            , [self()]),
+                request(Client, NUnits)
             end
     end.
     
