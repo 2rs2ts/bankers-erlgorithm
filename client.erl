@@ -49,6 +49,7 @@ start(Limit, N) ->
                             ~p.~n"
                             , [self(), C#client.limit]),
                         banker:attach(C#client.limit),
+                        % need to wait to know you are attached!
                         io:format("(client start) Client ~p attached to Banker.~n", [self()]),
                         %banker:status(),
                         client_loop(C, X)
@@ -163,6 +164,7 @@ request(Client, NUnits) ->
     %        io:format("(request) Banker requesting loan from Client ~p.~n", [self()]),
     %        Pid1 ! {self(), loan, Client#client.loan}
     %end,
+    io:format("(request) Client ~p is prepared to receive state requests.~n", [self()]),
     receive_state_requests(Client),
     % don't move on to this step until you know you won't get another request?
     receive
@@ -201,6 +203,7 @@ request(Client, NUnits) ->
 release(Client, NUnits) ->
     io:format("(release) Client ~p is releasing ~p resources.~n", [self(), NUnits]),
     banker:release(NUnits),
+    %receive_state_requests(Client),
     io:format("(release) Client ~p now has ~p resources.~n", [self(),Client#client.loan - NUnits]),
     #client { limit = Client#client.limit
             , loan = Client#client.loan - NUnits
@@ -223,5 +226,6 @@ receive_state_requests(Client) ->
             Pid ! {self(), loan, Client#client.loan},
             receive_state_requests(Client);
         {_Pid, polling_done} ->
+            io:format("(receive_state_requests) Client ~p may move forward.~n", [self()]),
             done
     end.
