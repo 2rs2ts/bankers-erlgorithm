@@ -131,23 +131,23 @@ main(Banker) ->
             %io:format("(main) Banker trying to kill Client ~p!~n", [Pid]),
             %exit(Pid, die_before_request),
             Compare_Clients = fun(C1, C2) -> compare_clients(C1, C2) end,
-            io:format("(main) Banker is sorting clients.~n", []),
+            io:format("(main) Banker is sorting clients: ~p.~n", [ClientProcs]),
             % differentiate between these checks and safe_state check
-            lists:sort(Compare_Clients, ClientProcs),
+            SortedClients = lists:sort(Compare_Clients, ClientProcs),
             io:format("(main) Banker sorted clients.~n", []),
             io:format("(main) Banker is checking for safe state.~n", []),
-            NewBanker = case is_safe_state(ClientProcs, CashOnHand) of
+            NewBanker = case is_safe_state(SortedClients, CashOnHand) of
                 true ->
                     io:format("(main) State is safe.~n", []),
-                    polling_done(ClientProcs),
+                    polling_done(SortedClients),
                     Pid ! ok,
                     #banker { capital = Capital
                             , cash_on_hand = CashOnHand - NUnits
-                            , client_procs = ClientProcs
+                            , client_procs = SortedClients
                             };
                 false ->
                     io:format("(main) State is not safe.~n", []),
-                    polling_done(ClientProcs),
+                    polling_done(SortedClients),
                     Pid ! {self(), unsafe}
             end,
             %io:format("(main) Banker trying to kill Client ~p!~n", [Pid]),
